@@ -1,3 +1,5 @@
+<img src="docs/logo.svg" width="96" alt="">
+
 # Accounting
 
 Personal double-entry bookkeeping in one offline HTML app: booking with a live balance check, journal, ledger,

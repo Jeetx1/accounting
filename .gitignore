@@ -1,0 +1,17 @@
+# your real books: never in the repo (a GitHub Pages repo is public)
+private/
+# every data file, export and personal copy of the app. Only package.json is a .json that belongs here.
+*.json
+!package.json
+*.xlsx
+*.xls
+*.csv
+*.tsv
+*.pdf
+*ACCOUNTING*.html
+*ACCOUNTING*.json
+*BACKUP*
+node_modules/
+.DS_Store
+Thumbs.db
+desktop.ini

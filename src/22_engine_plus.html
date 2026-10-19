@@ -1,0 +1,1608 @@
+<script id="engine-plus">
+/* =========================================================================
+   ENGINE-PLUS — ebenfalls reine Logik, ohne DOM. Alles hier ist testbar.
+   ========================================================================= */
+(function(E){
+"use strict";
+const r2 = E.r2;
+
+/* ---- Zahlen robust lesen -------------------------------------------- */
+// Regeln, bewusst einfach und vorhersehbar:
+// - Apostrophe, Leerzeichen und geschützte Leerzeichen sind Tausendertrenner.
+// - Stehen Punkt und Komma beide drin, ist das letzte der Dezimaltrenner.
+// - Ein einzelner Punkt oder ein einzelnes Komma ist der Dezimaltrenner.
+// - Mehrere gleiche Trenner sind Tausendertrenner.
+// - (123), 123- und −123 sind negativ.
+function zahl(s){
+  if(typeof s === "number") return isFinite(s) ? s : NaN;
+  if(s === null || s === undefined) return NaN;
+  let t = String(s).trim();
+  if(!t) return NaN;
+  let neg = false;
+  if(/^\(.*\)$/.test(t)){ neg = true; t = t.slice(1,-1).trim(); }
+  t = t.replace(/[\u2212\u2013\u2014]/g, "-");
+  t = t.replace(/^(CHF|EUR|USD|GBP|Fr\.|SFr\.)\s*/i, "").replace(/\s*(CHF|EUR|USD|GBP)$/i, "");
+  if(/-$/.test(t)){ neg = !neg; t = t.slice(0,-1).trim(); }
+  if(/^-/.test(t)){ neg = !neg; t = t.slice(1).trim(); }
+  if(/^\+/.test(t)) t = t.slice(1);
+  t = t.replace(/['\u2019\u00A0\u202F\s]/g, "");
+  if(!/^[0-9.,]+$/.test(t)) return NaN;
+  const p = t.lastIndexOf("."), k = t.lastIndexOf(",");
+  if(p >= 0 && k >= 0){
+    const dez = p > k ? "." : ",";
+    t = t.split(dez === "." ? "," : ".").join("");
+    if(dez === ",") t = t.replace(",", ".");
+  }else if(k >= 0){
+    const teile = t.split(",");
+    t = teile.length > 2 ? teile.join("") : teile.join(".");
+  }else if(p >= 0){
+    const teile = t.split(".");
+    if(teile.length > 2) t = teile.join("");
+  }
+  if(!/^\d*\.?\d*$/.test(t) || t === "" || t === ".") return NaN;
+  const n = parseFloat(t);
+  return isFinite(n) ? (neg ? -n : n) : NaN;
+}
+function nachkomma(n){ const s = String(n); const i = s.indexOf("."); return i < 0 ? 0 : s.length - i - 1; }
+
+/* ---- Datum ---------------------------------------------------------- */
+function istDatum(d){
+  if(typeof d !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  const t = d.split("-").map(Number);
+  const x = new Date(Date.UTC(t[0], t[1]-1, t[2]));
+  return x.getUTCFullYear()===t[0] && x.getUTCMonth()===t[1]-1 && x.getUTCDate()===t[2];
+}
+function reparDatum(d){
+  if(istDatum(d)) return d;
+  const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(String(d||"").trim());
+  if(m){ const x = m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0"); if(istDatum(x)) return x; }
+  return null;
+}
+function monatPlus(ym, n){
+  const t = ym.split("-").map(Number);
+  const d = new Date(Date.UTC(t[0], t[1]-1+n, 1));
+  return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0");
+}
+function datumPlusMonate(datum, n){
+  const t = datum.split("-").map(Number);
+  const d = new Date(Date.UTC(t[0], t[1]-1+n, 1));
+  const letzter = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth()+1, 0)).getUTCDate();
+  return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(Math.min(t[2], letzter)).padStart(2,"0");
+}
+function monatsende(ym){ const t = ym.split("-").map(Number); return E.letzterTag(t[0], t[1]); }
+
+/* ---- Datei prüfen und reparieren ------------------------------------ */
+const EINSTELLUNGEN = {ara:"1300", araJahr:"1305", pra:"2300", praJahr:"2305", gewinnvortrag:"2800", kursgewinn:"6999", kursverlust:"6949", abgangGewinn:"6815", abgangVerlust:"6810", ersteller:""};
+function pruefeDatei(roh, vorlage){
+  const w = [], f = [];
+  if(!roh || typeof roh !== "object" || Array.isArray(roh)) return {fehler:["The file contains no accounting data."], warnungen:w};
+  if(!Array.isArray(roh.konten))    f.push("The chart of accounts is missing from the file.");
+  if(!Array.isArray(roh.buchungen)) f.push("The bookings are missing from the file.");
+  if(f.length) return {fehler:f, warnungen:w};
+  const klon = o => JSON.parse(JSON.stringify(o));
+
+  // Aufbau
+  let gruppen = Array.isArray(roh.gruppen) && roh.gruppen.length ? roh.gruppen.filter(g=>g && g.c && g.s) : klon(vorlage.gruppen);
+  if(!gruppen.length) gruppen = klon(vorlage.gruppen);
+  const gm = {}; gruppen.forEach(g=> gm[g.c] = g);
+  let buckets = Array.isArray(roh.buckets) && roh.buckets.length ? roh.buckets.filter(b=>b && b.b) : klon(vorlage.buckets);
+  vorlage.buckets.forEach(b=>{ if(!buckets.some(x=>x.b===b.b)) buckets.push(klon(b)); });
+  const sektionen = Object.assign(klon(vorlage.sektionen), roh.sektionen||{});
+  const titel = Object.assign(klon(vorlage.titel), roh.titel||{});
+  const einstellungen = Object.assign({}, EINSTELLUNGEN, roh.einstellungen||{});
+
+  // Ersatzgruppe nach erster Ziffer, falls ein Konto auf eine unbekannte Gruppe zeigt
+  const ersatz = nr => {
+    const z = String(nr).charAt(0);
+    const finde = fn => (gruppen.find(fn)||{}).c;
+    if(z === "1") return finde(g=>g.s==="A");
+    if(z === "2") return finde(g=>g.s==="P" && g.sek==="KFK") || finde(g=>g.s==="P");
+    if(z === "3") return finde(g=>g.s==="E" && g.vz===-1);
+    return finde(g=>g.s==="E" && g.vz!==-1) || finde(g=>g.s==="E");
+  };
+
+  // Konten
+  const konten = [], gesehen = {};
+  roh.konten.forEach((k,i)=>{
+    const o = Array.isArray(k) ? {nr:k[0], name:k[1], grp:k[2], cf:k[3], wkz:k[4]} : (k||{});
+    const nr = o.nr === undefined || o.nr === null ? "" : String(o.nr).trim();
+    if(!nr){ w.push("Account entry "+(i+1)+" has no number and was skipped."); return; }
+    if(gesehen[nr]){ w.push("Account "+nr+" was listed twice; the second entry was skipped."); return; }
+    gesehen[nr] = true;
+    let g = o.grp;
+    if(!gm[g]){
+      const neu = ersatz(nr);
+      w.push("Account "+nr+" pointed to an unknown group and was placed in “"+(gm[neu]?gm[neu].t:neu)+"”. Please check.");
+      g = neu;
+    }
+    const cf = o.cf && (buckets.some(b=>b.b===o.cf) || o.cf === "nc" || o.cf === "cash") ? o.cf : null;
+    konten.push([nr, String(o.name||("Konto "+nr)), g, cf, o.wkz ? String(o.wkz).toUpperCase() : null]);
+  });
+  const km = {}; konten.forEach(k=> km[k[0]] = true);
+
+  // Buchungen
+  const buchungen = [], ids = {};
+  let leer = 0, gedreht = 0;
+  roh.buchungen.forEach((b,i)=>{
+    if(!b || typeof b !== "object"){ w.push("Booking entry "+(i+1)+" was unreadable and was skipped."); return; }
+    let id = b.id === undefined || b.id === null ? "" : String(b.id);
+    if(!id || ids[id]){ const neu = "r"+String(i+1).padStart(4,"0"); if(id) w.push("Booking ID "+id+" was duplicated; the second one is now "+neu+"."); id = neu; }
+    ids[id] = true;
+    let datum = reparDatum(b.datum);
+    if(!datum){ w.push("Booking “"+(b.text||id)+"” has no valid date ("+b.datum+") and appears in no report. Fix it in the Journal under “Without a valid date”."); datum = String(b.datum||""); }
+    else if(datum !== b.datum) w.push("Date of booking “"+(b.text||id)+"” converted from "+b.datum+" to "+datum+".");
+    const z = [];
+    (Array.isArray(b.z) ? b.z : []).forEach(x=>{
+      if(!Array.isArray(x) || x[0]===undefined || x[0]===null) return;
+      let s = zahl(x[1]), h = zahl(x[2]);
+      s = isFinite(s) ? r2(s) : 0; h = isFinite(h) ? r2(h) : 0;
+      if(s < 0){ h = r2(h - s); s = 0; gedreht++; }
+      if(h < 0){ s = r2(s - h); h = 0; gedreht++; }
+      if(!s && !h){ leer++; return; }
+      const zeile = [String(x[0]).trim(), s, h];
+      const fw = zahl(x[3]), kurs = zahl(x[4]);
+      const hatFW = isFinite(fw) && fw && isFinite(kurs) && kurs;
+      const text = typeof x[5] === "string" ? x[5].trim() : "";
+      if(hatFW || text){ zeile.push(hatFW ? r2(Math.abs(fw)) : 0); zeile.push(hatFW ? kurs : 0); }
+      if(text) zeile.push(text);
+      z.push(zeile);
+    });
+    const neu = {id:id, datum:datum, beleg:String(b.beleg||""), text:String(b.text||""), z:z};
+    if(b.eb) neu.eb = true;
+    if(b.plan && typeof b.plan === "object") neu.plan = b.plan;
+    let ss=0, hh=0; z.forEach(x=>{ ss=r2(ss+x[1]); hh=r2(hh+x[2]); });
+    if(Math.abs(ss-hh) > 0.005) w.push("Booking “"+(neu.text||id)+"” of "+datum+" does not balance (difference "+r2(ss-hh).toFixed(2)+").");
+    z.forEach(x=>{ if(!km[x[0]]) w.push("Booking “"+(neu.text||id)+"” uses the unknown account "+x[0]+"."); });
+    buchungen.push(neu);
+  });
+  if(leer) w.push(leer+" empty booking line(s) without an amount were removed.");
+  if(gedreht) w.push(gedreht+" negative amount(s) were moved to the opposite side.");
+
+  // Geschäftsjahr
+  let jahr = parseInt(roh.jahr, 10);
+  if(!(jahr >= 1900 && jahr <= 2200)){
+    const z = {}; buchungen.forEach(b=>{ if(istDatum(b.datum)) z[b.datum.slice(0,4)] = (z[b.datum.slice(0,4)]||0)+1; });
+    const best = Object.keys(z).sort((a,b)=>z[b]-z[a])[0];
+    jahr = best ? parseInt(best,10) : new Date().getFullYear();
+    w.push("The financial year was missing and has been set to "+jahr+".");
+  }
+
+  // Kurse
+  const kurse = {};
+  Object.keys(roh.kurse || vorlage.kurse || {}).forEach(c=>{
+    const v = zahl((roh.kurse||vorlage.kurse)[c]);
+    if(isFinite(v) && v > 0) kurse[String(c).toUpperCase()] = v;
+  });
+
+  // Vergleichsjahre
+  const vergleichsjahre = [];
+  (Array.isArray(roh.vergleichsjahre) ? roh.vergleichsjahre : []).forEach(v=>{
+    if(!v || !(parseInt(v.jahr,10) > 1900) || !v.salden || typeof v.salden !== "object") return;
+    const salden = {};
+    Object.keys(v.salden).forEach(nr=>{ const x = zahl(v.salden[nr]); if(isFinite(x) && Math.abs(x) >= 0.005) salden[String(nr)] = r2(x); });
+    vergleichsjahre.push({jahr:parseInt(v.jahr,10), quelle:String(v.quelle||"Import"), importiert:String(v.importiert||""), salden:salden});
+  });
+
+  const ui = Object.assign({tab:"uebersicht", periode:"J", ytd:false, vergleich:"start"}, roh.ui||{});
+  // Closed years: bookings dated in them can no longer be changed
+  const abgeschlossen = (Array.isArray(roh.abgeschlossen) ? roh.abgeschlossen : [])
+    .map(x=>parseInt(x,10)).filter((x,i,a)=> x >= 1900 && x <= 2200 && a.indexOf(x) === i).sort((a,b)=>a-b);
+  const daten = {
+    typ:"buchhaltung", version:5,
+    mandant: String(roh.mandant||"Untitled"), jahr:jahr,
+    waehrung: String(roh.waehrung||"CHF").toUpperCase(), kurse:kurse,
+    sektionen:sektionen, titel:titel, buckets:buckets, gruppen:gruppen,
+    konten:konten, buchungen:buchungen, einstellungen:einstellungen,
+    vergleichsjahre:vergleichsjahre, abgeschlossen:abgeschlossen, ui:ui
+  };
+  // Anything this version does not know is kept as it is, so no data is ever dropped on saving.
+  Object.keys(roh).forEach(k=>{ if(!(k in daten)) daten[k] = roh[k]; });
+  // the fixed-asset register; the groups that hold depreciable assets are flagged once from the classic
+  // ranges 1500–1999 (movable, immovable, intangible) and editable on the Structure page afterwards
+  daten.anlagen = (Array.isArray(roh.anlagen) ? roh.anlagen : []).filter(a=> a && a.id).map(anlageNorm);
+  if(!gruppen.some(g=> "anlage" in g)) gruppen.forEach(g=>{ if(g.s === "A" && (g.r||[]).length && g.r.every(r=> r[0] >= 1500 && r[1] <= 2000)) g.anlage = true; });
+  // Cash flow from the bookings (12 October): credit cards count inside cash, like an account with a negative
+  // balance. Done once; afterwards the choice on Statement settings stands.
+  const aw = daten.auswertung && typeof daten.auswertung === "object" ? daten.auswertung : null;
+  if(!aw || !aw.cfDirekt){
+    const karten = konten.map(k=> Array.isArray(k) ? {nr:String(k[0]), name:k[1]} : k)
+      .filter(k=> /^2/.test(k.nr) && /kreditkarte|credit ?card|american express|mastercard/i.test(k.name||""));
+    const ziel = aw || (karten.length ? (daten.auswertung = {}) : null);
+    if(ziel){
+      ziel.cfOverrides = ziel.cfOverrides && typeof ziel.cfOverrides === "object" ? ziel.cfOverrides : {};
+      karten.forEach(k=>{ if(!ziel.cfOverrides[k.nr]) ziel.cfOverrides[k.nr] = "cash"; });
+      ziel.cfDirekt = 1;
+    }
+  }
+  // Cash flow, second step (12 October): tax accounts on the balance sheet (tax liability, current account with the
+  // tax office) shown under the income statement group that holds the tax expense. Done once; editable afterwards.
+  if(daten.auswertung && (daten.auswertung.cfDirekt || 0) < 2){
+    const aw2 = daten.auswertung, kl = konten.map(k=> Array.isArray(k) ? {nr:String(k[0]), name:k[1], grp:k[2]} : k);
+    const gs = {}; gruppen.forEach(g=> gs[g.c] = g);
+    const steuerK = kl.find(k=> +k.nr >= 3000 && gs[k.grp] && gs[k.grp].s === "E" && /direkte steuern|ertragssteuer|income tax/i.test(k.name||""));
+    if(steuerK){
+      aw2.cfZeile = aw2.cfZeile && typeof aw2.cfZeile === "object" ? aw2.cfZeile : {};
+      kl.filter(k=> +k.nr < 3000 && /direkte steuern|steuerverwaltung/i.test(k.name||"")).forEach(k=>{ if(!aw2.cfZeile[k.nr]) aw2.cfZeile[k.nr] = steuerK.grp; });
+    }
+    aw2.cfDirekt = 2;
+  }
+  return {fehler:[], warnungen:w, daten:daten};
+}
+
+/* ---- Belegnummer vorschlagen ---------------------------------------- */
+function naechsterBeleg(state){
+  const liste = (state.buchungen||[]).filter(b=>b.beleg && !b.eb && !(b.plan && b.plan.rolle==="aufloesung"));
+  for(let i = liste.length-1; i >= 0; i--){
+    const m = /^(.*?)(\d+)$/.exec(liste[i].beleg);
+    if(!m) continue;
+    const neu = String(parseInt(m[2],10)+1).padStart(m[2].length, "0");
+    const kandidat = m[1] + neu;
+    if(!liste.some(b=>b.beleg === kandidat)) return kandidat;
+  }
+  return "";
+}
+
+/* ---- Verteilung über Monate ----------------------------------------- */
+// Der volle Betrag geht zuerst auf das Abgrenzungskonto (Aufwand → ARA,
+// Ertrag → PRA). Danach wird pro Monat aufgelöst – aber nur für Monate, deren
+// Monatsende im laufenden Geschäftsjahr liegt. Der Rest bleibt per 31.12.
+// auf dem Abgrenzungskonto stehen.
+// Seit 12.10.2026 laufen Verteilungen unterjährig über araJahr (1305, Aufwand) bzw. praJahr
+// (2305, Ertrag); nur der Teil fürs Folgejahr wird am 31.12. umgebucht (1300 / 1305 bzw.
+// 2305 / 2300), 1305 und 2305 sind per 31.12. null. Reine Auflösungen einer
+// Vorjahresabgrenzung laufen weiter über 1300 bzw. 2300.
+function verteilung(state, ix, o){
+  const fehler = [], warnungen = [];
+  const jahr = state.jahr, ein = Object.assign({}, EINSTELLUNGEN, state.einstellungen||{});
+  const ara = o.ara || ein.ara, pra = o.pra || ein.pra;
+  const araJ = o.araJahr !== undefined ? o.araJahr : ein.araJahr;
+  const praJ = o.praJahr !== undefined ? o.praJahr : ein.praJahr;
+  const n = parseInt(o.monate, 10);
+  if(!(n >= 2 && n <= 60)) fehler.push("Choose between 2 and 60 months.");
+  if(!/^\d{4}-\d{2}$/.test(o.start||"")) fehler.push("Choose the first month.");
+  if(!istDatum(o.datum)) fehler.push("Enter a valid booking date.");
+  const zeilen = (o.zeilen||[]).filter(z=>z && ix.km[z[0]] && ((z[1]||0) || (z[2]||0)));
+  const erZ = zeilen.filter(z=>E.istER(E.grp(ix, z[0])));
+  if(!erZ.length) fehler.push("There is no expense or income line to spread.");
+  if(erZ.some(z=>(z[1]||0)-(z[2]||0) > 0) && !ix.km[ara]) fehler.push("The accrual account "+ara+" is not in the chart of accounts.");
+  if(erZ.some(z=>(z[1]||0)-(z[2]||0) < 0) && !ix.km[pra]) fehler.push("The accrual account "+pra+" is not in the chart of accounts.");
+  if(fehler.length) return {ok:false, fehler:fehler, warnungen:warnungen};
+
+  const id = o.id || ("v"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  // Basisbuchung: Erfolgszeilen ersetzt durch Abgrenzung
+  let araS = 0, praH = 0;
+  const basisZ = [];
+  zeilen.forEach(z=>{
+    if(!E.istER(E.grp(ix, z[0]))){ basisZ.push(z.slice()); return; }
+    const a = r2((z[1]||0)-(z[2]||0));
+    if(a > 0) araS = r2(araS + a); else praH = r2(praH - a);
+  });
+  const araZeile = araS ? [ara, araS, 0] : null;
+  if(araZeile) basisZ.push(araZeile);
+  const praZeile = praH ? [pra, 0, praH] : null;
+  if(praZeile) basisZ.push(praZeile);
+  // Release only: the counter line already sits on the accrual account (for example an accrual
+  // from last year's closing). Then there is nothing to defer, only the monthly releases.
+  const nichtER = zeilen.filter(z=>!E.istER(E.grp(ix, z[0])));
+  const nurAufloesung = nichtER.length > 0 && nichtER.every(z=> (z[0] === ara && araS && (z[2]||0) > 0) || (z[0] === pra && praH && (z[1]||0) > 0));
+  // in-year account for expenses: 1305 when it exists, otherwise everything stays on 1300 as before
+  const araU = !nurAufloesung && araJ && araJ !== ara && ix.km[araJ] ? araJ : ara;
+  if(araZeile) araZeile[0] = araU;
+  const praU = !nurAufloesung && praJ && praJ !== pra && ix.km[praJ] ? praJ : pra;
+  if(praZeile) praZeile[0] = praU;
+  // the split per income statement account, kept on the plan: a later year continues the spread from it
+  const konten = {};
+  erZ.forEach(x=>{ konten[x[0]] = r2((konten[x[0]]||0) + (x[1]||0) - (x[2]||0)); });
+  const basis = nurAufloesung ? null : {datum:o.datum, beleg:o.beleg||"", text:o.text||"", z:basisZ,
+    plan:{id:id, rolle:"basis", monate:n, start:o.start, text:o.text||"", konten:konten}};
+
+  const vorschau = [], aufloesungen = [];
+  let rest = 0, restA = 0, restP = 0, vorJahr = 0, nachFolgejahr = 0;
+  for(let i=0; i<n; i++){
+    const monat = monatPlus(o.start, i);
+    const z = []; let a1 = 0, p1 = 0;
+    erZ.forEach(x=>{
+      const a = r2((x[1]||0)-(x[2]||0));
+      const teil = r2(r2(a*(i+1)/n) - r2(a*i/n));
+      if(!teil) return;
+      const lt = x[5] ? [0, 0, x[5]] : [];
+      if(teil > 0){ z.push([x[0], teil, 0].concat(lt)); a1 = r2(a1+teil); }
+      else        { z.push([x[0], 0, -teil].concat(lt)); p1 = r2(p1-teil); }
+    });
+    if(a1) z.push([araU, 0, a1]);
+    if(p1) z.push([praU, p1, 0]);
+    const ende = monatsende(monat);
+    const datum = ende < o.datum ? o.datum : ende;
+    const imJahr = datum.slice(0,4) === String(jahr);
+    const betrag = r2(a1 + p1);
+    if(parseInt(monat.slice(0,4),10) < jahr) vorJahr++;
+    if(parseInt(monat.slice(0,4),10) > jahr+1) nachFolgejahr++;
+    vorschau.push({nr:i+1, monat:monat, datum:datum, betrag:betrag, gebucht:imJahr});
+    if(imJahr){
+      aufloesungen.push({datum:datum, beleg:o.beleg||"", text:(o.text||"Spread")+" ("+(i+1)+"/"+n+")", z:z,
+        plan:Object.assign({id:id, rolle:"aufloesung", nr:i+1, von:n, monat:monat}, nurAufloesung ? {total:r2(araS + praH), start:o.start, text:o.text||""} : {})});
+    }else{ rest = r2(rest + betrag); restA = r2(restA + a1); restP = r2(restP + p1); }
+  }
+  // what belongs to next year moves to 1300 / 2300 on 31.12., so 1305 and 2305 close the year at zero
+  const uz = [];
+  if(araU !== ara && restA > 0.005) uz.push([ara, restA, 0], [araU, 0, restA]);
+  if(praU !== pra && restP > 0.005) uz.push([praU, restP, 0], [pra, 0, restP]);
+  const uebertrag = uz.length ? {datum:jahr+"-12-31", beleg:o.beleg||"", text:(o.text||"Spread")+" (carried into "+(jahr+1)+")",
+    z:uz, plan:{id:id, rolle:"uebertrag"}} : null;
+  if(vorJahr) warnungen.push(vorJahr+" month(s) lie before the financial year "+jahr+" and are released on the booking date.");
+  if(nachFolgejahr) warnungen.push("Part of it concerns months after 31.12."+(jahr+1)+". Check whether that share belongs in a long-term accrual.");
+  if(o.datum.slice(0,4) !== String(jahr)) warnungen.push("The booking date is outside the financial year "+jahr+".");
+  return {ok:true, fehler:[], warnungen:warnungen, id:id, basis:basis, aufloesungen:aufloesungen, uebertrag:uebertrag,
+          vorschau:vorschau, rest:rest, total:r2(araS + praH), ara:ara, araJahr:araU, pra:pra, praJahr:praU, nurAufloesung:nurAufloesung};
+}
+// Older spreads of open years, booked straight onto 1300/2300, moved onto the in-year accounts
+// (1305/2305) with the carry-over on 31.12., like every new spread since 12 October 2026.
+// Changes `state` in place; closed years and release-only plans are left alone. neueId() gives booking ids.
+function spreadsUmstellen(state, ix, neueId){
+  const ein = Object.assign({}, EINSTELLUNGEN, state.einstellungen||{});
+  const ara = ein.ara, pra = ein.pra;
+  const araJ = ein.araJahr && ein.araJahr !== ara && ix.km[ein.araJahr] ? ein.araJahr : null;
+  const praJ = ein.praJahr && ein.praJahr !== pra && ix.km[ein.praJahr] ? ein.praJahr : null;
+  const zu = new Set(state.abgeschlossen || []), proPlan = {};
+  (state.buchungen||[]).forEach(b=>{ if(b && b.plan && b.plan.id) (proPlan[b.plan.id] = proPlan[b.plan.id] || []).push(b); });
+  const ergebnis = {plaene:0, buchungen:0, uebertraege:0, jahre:[]};
+  Object.keys(proPlan).forEach(id=>{
+    const alle = proPlan[id], basis = alle.find(b=> b.plan.rolle === "basis");
+    if(!basis || alle.some(b=> b.plan.rolle === "uebertrag")) return;
+    const J = parseInt(basis.datum.slice(0,4), 10);
+    if(zu.has(J)) return;
+    const mitA = araJ && basis.z.some(z=> z[0] === ara && (z[1]||0) > 0);
+    const mitP = praJ && basis.z.some(z=> z[0] === pra && (z[2]||0) > 0);
+    if(!mitA && !mitP) return;
+    let restA = 0, restP = 0, geaendert = 0;
+    alle.filter(b=> b === basis || (b.plan.rolle === "aufloesung" && parseInt(b.datum.slice(0,4),10) === J)).forEach(b=>{
+      let hier = false;
+      b.z.forEach(z=>{
+        if(mitA && z[0] === ara){ z[0] = araJ; restA = r2(restA + (z[1]||0) - (z[2]||0)); hier = true; }
+        if(mitP && z[0] === pra){ z[0] = praJ; restP = r2(restP + (z[2]||0) - (z[1]||0)); hier = true; }
+      });
+      if(hier) geaendert++;
+    });
+    const uz = [];
+    if(restA > 0.005) uz.push([ara, restA, 0], [araJ, 0, restA]);
+    if(restP > 0.005) uz.push([praJ, restP, 0], [pra, 0, restP]);
+    if(uz.length){
+      state.buchungen.push({id:neueId(), datum:J+"-12-31", beleg:basis.beleg||"", text:(basis.plan.text||basis.text||"Spread")+" (carried into "+(J+1)+")",
+        z:uz, plan:{id:id, rolle:"uebertrag"}});
+      ergebnis.uebertraege++;
+    }
+    ergebnis.plaene++; ergebnis.buchungen += geaendert;
+    if(ergebnis.jahre.indexOf(J) < 0) ergebnis.jahre.push(J);
+  });
+  return ergebnis;
+}
+/* ---- Continue the spreads of earlier years into year J -----------------
+   A spread booked in an earlier year whose months run into J has its
+   remaining share sitting on the accrual account (1300 / 2300) since the
+   carry-over at 31.12. This books the releases for the months of J, under the
+   plan's own id, against that account. Months after J stay on the account.
+   A spread that was already continued by hand (a release-only plan in J with
+   the same text and amount) is left alone, so nothing is booked twice.
+   Returns the bookings to add (without ids) and a summary per plan.           */
+function spreadsFortfuehren(state, ix, J){
+  const ein = Object.assign({}, EINSTELLUNGEN, state.einstellungen||{});
+  const ara = ein.ara, pra = ein.pra;
+  const zu = new Set(state.abgeschlossen||[]);
+  const aus = {bookings:[], plaene:[], gesperrt: zu.has(J)};
+  if(aus.gesperrt) return aus;
+  const alle = state.buchungen||[];
+  const proPlan = {};
+  alle.forEach(b=>{ if(b && b.plan && b.plan.id) (proPlan[b.plan.id] = proPlan[b.plan.id] || []).push(b); });
+  const norm = t => String(t||"").replace(/\s*\(\d+\/\d+\)\s*$/, "").replace(/\s+/g, " ").trim().toLowerCase();
+  // release-only plans booked by hand in J: text and total, to recognise a spread already continued
+  const vonHand = Object.keys(proPlan).map(id=> proPlan[id]).filter(bs=> !bs.some(b=> b.plan.rolle === "basis") && bs.some(b=> b.plan.total !== undefined && b.datum.slice(0,4) === String(J)))
+    .map(bs=>{ const b = bs.find(x=> x.plan.total !== undefined); return {text:norm(b.plan.text || b.text), total:r2(b.plan.total)}; });
+  plaene(state, ix).forEach(p=>{
+    if(!p.basisId || !p.start || !(p.monate >= 2) || Math.abs(p.rest) < .005) return;
+    if(!p.datum || p.datum.slice(0,4) >= String(J)) return;
+    const bs = proPlan[p.id] || [], basis = bs.find(b=> b.plan.rolle === "basis");
+    if(!basis) return;
+    if(bs.some(b=> b.plan.rolle === "aufloesung" && b.datum.slice(0,4) === String(J))) return;   // already continued under its own id
+    const n = p.monate, gebucht = new Set(bs.filter(b=> b.plan.rolle === "aufloesung").map(b=> b.plan.nr));
+    // the split per account: from the plan, else reconstructed from the releases already booked
+    let konten = basis.plan.konten && typeof basis.plan.konten === "object" ? Object.assign({}, basis.plan.konten) : null;
+    if(!konten){
+      const summe = {}; let gesamt = 0;
+      bs.filter(b=> b.plan.rolle === "aufloesung").forEach(b=> b.z.forEach(z=>{ if(E.istER(E.grp(ix, z[0]))){ const v = r2((z[1]||0)-(z[2]||0)); summe[z[0]] = r2((summe[z[0]]||0) + v); gesamt = r2(gesamt + Math.abs(v)); } }));
+      if(!gesamt) return;
+      konten = {}; Object.keys(summe).forEach(k=> konten[k] = r2(p.total * summe[k] / gesamt));
+    }
+    // what is still open per account, spread evenly over the months not yet released (whatever rounding the
+    // earlier releases used), so the accrual account ends on exactly zero with the last month
+    const offenK = {};
+    Object.keys(konten).forEach(k=> offenK[k] = konten[k]);
+    bs.filter(b=> b.plan.rolle === "aufloesung").forEach(b=> b.z.forEach(z=>{ if(offenK[z[0]] !== undefined) offenK[z[0]] = r2(offenK[z[0]] - (z[1]||0) + (z[2]||0)); }));
+    const offeneMonate = []; for(let i = 0; i < n; i++) if(!gebucht.has(i+1)) offeneMonate.push(i);
+    const m = offeneMonate.length; if(!m) return;
+    const monate = []; let betrag = 0; const neu = [];
+    offeneMonate.forEach((i, j)=>{
+      const monat = monatPlus(p.start, i);
+      if(parseInt(monat.slice(0,4), 10) !== J) return;
+      const z = []; let a1 = 0, p1 = 0;
+      Object.keys(offenK).forEach(k=>{
+        const a = offenK[k], teil = r2(r2(a*(j+1)/m) - r2(a*j/m));
+        if(!teil) return;
+        if(teil > 0){ z.push([k, teil, 0]); a1 = r2(a1 + teil); } else { z.push([k, 0, -teil]); p1 = r2(p1 - teil); }
+      });
+      if(a1) z.push([ara, 0, a1]);
+      if(p1) z.push([pra, p1, 0]);
+      if(!z.length) return;
+      neu.push({datum:monatsende(monat), beleg:basis.beleg||"", text:(p.text||"Spread")+" ("+(i+1)+"/"+n+")", z:z,
+        plan:{id:p.id, rolle:"aufloesung", nr:i+1, von:n, monat:monat}});
+      monate.push(monat); betrag = r2(betrag + a1 + p1);
+    });
+    if(!neu.length) return;
+    if(vonHand.some(h=> h.text === norm(p.text) && Math.abs(h.total - betrag) < .05)) return;   // continued by hand already
+    aus.bookings = aus.bookings.concat(neu);
+    aus.plaene.push({id:p.id, text:p.text, monate:monate.length, von:monate[0], bis:monate[monate.length-1], betrag:betrag, rest:r2(p.rest - betrag)});
+  });
+  return aus;
+}
+function plaene(state, ix){
+  const ein = Object.assign({}, EINSTELLUNGEN, state.einstellungen||{});
+  const m = {};
+  (state.buchungen||[]).forEach(b=>{
+    if(!b.plan || !b.plan.id || b.plan.rolle === "uebertrag") return;
+    const p = m[b.plan.id] = m[b.plan.id] || {id:b.plan.id, text:"", total:0, aufgeloest:0, gebucht:0, monate:0, start:"", basisId:null};
+    const abgr = b.z.reduce((a,z)=>{
+      if(z[0] === ein.ara || (ein.araJahr && z[0] === ein.araJahr)) return r2(a + (z[1]||0) - (z[2]||0));
+      if(z[0] === ein.pra || (ein.praJahr && z[0] === ein.praJahr)) return r2(a + (z[2]||0) - (z[1]||0));
+      return a;
+    }, 0);
+    if(b.plan.rolle === "basis"){
+      p.text = b.plan.text || b.text; p.total = r2(p.total + abgr); p.monate = b.plan.monate; p.start = b.plan.start; p.basisId = b.id; p.datum = b.datum;
+    }else{
+      p.aufgeloest = r2(p.aufgeloest - abgr); p.gebucht++;
+      if(b.plan.total !== undefined && !p.basisId){   // release-only plan
+        p.text = b.plan.text || p.text; p.total = b.plan.total; p.monate = b.plan.von; p.start = b.plan.start;
+        if(!p.datum || b.datum < p.datum){ p.datum = b.datum; p.ersteId = b.id; }
+      }
+    }
+  });
+  return Object.keys(m).map(k=>{ const p = m[k]; p.rest = r2(p.total - p.aufgeloest); if(!p.basisId) p.basisId = p.ersteId || null; return p; })
+    .sort((a,b)=> String(a.datum||"").localeCompare(String(b.datum||"")));
+}
+
+/* ---- Tabellen lesen: Text, CSV, XLSX -------------------------------- */
+function leseTabelleText(text){
+  text = String(text||"").replace(/^\uFEFF/, "");
+  const zeilenRoh = text.split(/\r\n|\n|\r/);
+  const probe = zeilenRoh.filter(l=>l.trim()).slice(0, 30).join("\n");
+  const trenner = probe.indexOf("\t") >= 0 ? "\t" : (probe.indexOf(";") >= 0 ? ";" : (probe.indexOf(",") >= 0 ? "," : "\t"));
+  const zeilen = [];
+  zeilenRoh.forEach(l=>{
+    if(!l.trim()) { zeilen.push([]); return; }
+    const zellen = []; let feld = "", q = false;
+    for(let i=0; i<l.length; i++){
+      const c = l[i];
+      if(q){
+        if(c === '"' && l[i+1] === '"'){ feld += '"'; i++; }
+        else if(c === '"') q = false;
+        else feld += c;
+      }else{
+        if(c === '"') q = true;
+        else if(c === trenner){ zellen.push(feld); feld = ""; }
+        else feld += c;
+      }
+    }
+    zellen.push(feld);
+    zeilen.push(zellen.map(z=>z.trim()));
+  });
+  return zeilen;
+}
+function xmlText(s){
+  return String(s).replace(/&#x([0-9a-f]+);/gi,(m,h)=>String.fromCodePoint(parseInt(h,16)))
+    .replace(/&#(\d+);/g,(m,d)=>String.fromCodePoint(parseInt(d,10)))
+    .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+}
+function spaltenIndex(ref){
+  const m = /^([A-Z]+)/.exec(ref||""); if(!m) return -1;
+  let n = 0; for(const c of m[1]) n = n*26 + (c.charCodeAt(0)-64);
+  return n-1;
+}
+async function leseXlsx(u8){
+  if(typeof DecompressionStream === "undefined")
+    throw new Error("This browser cannot read Excel files directly. Save the file as CSV, or copy the cells and paste them.");
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  let eocd = -1;
+  for(let i = u8.length-22; i >= Math.max(0, u8.length-65557); i--){ if(dv.getUint32(i,true) === 0x06054b50){ eocd = i; break; } }
+  if(eocd < 0) throw new Error("This is not a valid Excel file (.xlsx).");
+  const anzahl = dv.getUint16(eocd+10,true), cd = dv.getUint32(eocd+16,true);
+  const td = new TextDecoder("utf-8");
+  const eintraege = {};
+  let p = cd;
+  for(let i=0; i<anzahl; i++){
+    if(dv.getUint32(p,true) !== 0x02014b50) throw new Error("The directory of the Excel file is damaged.");
+    const methode = dv.getUint16(p+10,true), groesse = dv.getUint32(p+20,true);
+    const nl = dv.getUint16(p+28,true), xl = dv.getUint16(p+30,true), kl = dv.getUint16(p+32,true), lok = dv.getUint32(p+42,true);
+    eintraege[td.decode(u8.subarray(p+46, p+46+nl))] = {methode:methode, groesse:groesse, lok:lok};
+    p += 46+nl+xl+kl;
+  }
+  async function lies(name){
+    const e = eintraege[name]; if(!e) return null;
+    const start = e.lok + 30 + dv.getUint16(e.lok+26,true) + dv.getUint16(e.lok+28,true);
+    const daten = u8.subarray(start, start + e.groesse);
+    if(e.methode === 0) return td.decode(daten);
+    if(e.methode !== 8) throw new Error("The Excel file uses an unsupported compression.");
+    const strom = new Blob([daten]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return td.decode(new Uint8Array(await new Response(strom).arrayBuffer()));
+  }
+  const wb = await lies("xl/workbook.xml");
+  if(!wb) throw new Error("No workbook was found in the file.");
+  const rels = (await lies("xl/_rels/workbook.xml.rels")) || "";
+  const ziele = {};
+  rels.replace(/<Relationship\b[^>]*>/g, tag=>{
+    const id = (/\bId="([^"]+)"/.exec(tag)||[])[1], t = (/\bTarget="([^"]+)"/.exec(tag)||[])[1];
+    if(id && t) ziele[id] = t.replace(/^\/?xl\//,"").replace(/^\//,"");
+    return tag;
+  });
+  const sst = [];
+  const ss = await lies("xl/sharedStrings.xml");
+  if(ss) ss.replace(/<si\b[^>]*>([\s\S]*?)<\/si>/g, (m, inner)=>{
+    let t = ""; inner.replace(/<t\b[^>]*>([\s\S]*?)<\/t>/g, (mm, x)=>{ t += xmlText(x); return mm; });
+    sst.push(t); return m;
+  });
+  const blaetter = [];
+  const sheetTags = wb.match(/<sheet\b[^>]*>/g) || [];
+  for(const tag of sheetTags){
+    const name = xmlText((/\bname="([^"]*)"/.exec(tag)||[])[1]||"Sheet");
+    const rid = (/\br:id="([^"]+)"/.exec(tag)||/\bid="([^"]+)"/.exec(tag)||[])[1];
+    const pfad = "xl/" + (ziele[rid] || "");
+    const xml = await lies(pfad);
+    if(!xml) continue;
+    const zeilen = [];
+    xml.replace(/<row\b([^>]*)>([\s\S]*?)<\/row>/g, (m, attr, inner)=>{
+      const r = parseInt((/\br="(\d+)"/.exec(attr)||[])[1] || (zeilen.length+1), 10) - 1;
+      const zeile = [];
+      inner.replace(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, (mc, ca, ci)=>{
+        const idx = spaltenIndex((/\br="([A-Z]+\d+)"/.exec(ca)||[])[1]);
+        const typ = (/\bt="([^"]+)"/.exec(ca)||[])[1] || "n";
+        let wert = "";
+        if(ci){
+          const v = (/<v>([\s\S]*?)<\/v>/.exec(ci)||[])[1];
+          if(typ === "s") wert = sst[parseInt(v,10)] || "";
+          else if(typ === "inlineStr"){ let t=""; ci.replace(/<t\b[^>]*>([\s\S]*?)<\/t>/g,(q,x)=>{ t+=xmlText(x); return q; }); wert = t; }
+          else if(typ === "str" || typ === "e") wert = v !== undefined ? xmlText(v) : "";
+          else if(typ === "b") wert = v === "1" ? "TRUE" : "FALSE";
+          else wert = v !== undefined ? Number(v) : "";
+        }
+        if(idx >= 0) zeile[idx] = wert;
+        return mc;
+      });
+      for(let i=0;i<zeile.length;i++) if(zeile[i] === undefined) zeile[i] = "";
+      zeilen[r] = zeile;
+      return m;
+    });
+    for(let i=0;i<zeilen.length;i++) if(!zeilen[i]) zeilen[i] = [];
+    blaetter.push({name:name, zeilen:zeilen});
+  }
+  if(!blaetter.length) throw new Error("The Excel file contains no readable sheet.");
+  return blaetter;
+}
+
+/* ---- Saldenlisten analysieren --------------------------------------- */
+function istNr(v){ return /^\d{3,6}(\.\d{1,3})?$/.test(String(v===undefined||v===null?"":v).trim()); }
+function analysiereSalden(zeilen, ix){
+  const breite = zeilen.reduce((a,z)=>Math.max(a, z.length), 0);
+  // Kontonummer-Spalte: die mit den meisten bekannten Konten
+  let besteSpalte = -1, besteTreffer = 0;
+  for(let c=0; c<breite; c++){
+    let t = 0;
+    zeilen.forEach(z=>{ const v = String(z[c]===undefined?"":z[c]).trim(); if(istNr(v) && ix.km[v]) t++; });
+    if(t > besteTreffer){ besteTreffer = t; besteSpalte = c; }
+  }
+  if(besteSpalte < 0) return {ok:false, fehler:"No account numbers from the chart of accounts were found in the data."};
+
+  const kontoZeilen = [], ignoriert = [];
+  zeilen.forEach((z,i)=>{
+    const v = String(z[besteSpalte]===undefined?"":z[besteSpalte]).trim();
+    if(!/^\d{1,6}(\.\d{1,3})?$/.test(v)) return;
+    const hatZahl = z.some((x,c)=> c !== besteSpalte && x !== "" && isFinite(zahl(x)));
+    if(!hatZahl) return;
+    // Kurze Nummern ohne Konto dahinter sind Gruppen- oder Summenzeilen (z. B. Banana)
+    if(!ix.km[v] && v.split(".")[0].length < 4){ ignoriert.push({zeile:i+1, nr:v, text:String(z.find((x,c)=>c!==besteSpalte && x && !isFinite(zahl(x)))||"")}); return; }
+    kontoZeilen.push(i);
+  });
+  // Zahlspalten
+  const zahlSpalten = [];
+  for(let c=0; c<breite; c++){
+    if(c === besteSpalte) continue;
+    let gefuellt = 0, zahlen = 0;
+    kontoZeilen.forEach(i=>{
+      const v = zeilen[i][c];
+      if(v === undefined || v === null || String(v).trim() === "") return;
+      gefuellt++; if(isFinite(zahl(v))) zahlen++;
+    });
+    if(zahlen && zahlen >= 0.6*gefuellt){
+      let titel = "";
+      for(let i = kontoZeilen[0]-1; i >= Math.max(0, kontoZeilen[0]-6); i--){
+        const v = zeilen[i] && zeilen[i][c];
+        if(v !== undefined && String(v).trim() && !isFinite(zahl(v))){ titel = String(v).trim(); break; }
+        // Excel stores a date header as a serial number (46022 = 31.12.2025)
+        if(typeof v === "number" && Number.isInteger(v) && v > 20000 && v < 80000){
+          titel = new Date(Date.UTC(1899, 11, 30) + v*86400000).toISOString().slice(0,10); break; }
+      }
+      zahlSpalten.push({idx:c, titel:titel || ("Column "+String.fromCharCode(65 + (c%26))), zahlen:zahlen});
+    }
+  }
+  if(!zahlSpalten.length) return {ok:false, fehler:"No column with amounts was found next to the account numbers."};
+  // Namensspalte
+  let nameSpalte = -1, nameTreffer = 0;
+  for(let c=0; c<breite; c++){
+    if(c === besteSpalte || zahlSpalten.some(s=>s.idx===c)) continue;
+    let t = 0; kontoZeilen.forEach(i=>{ const v = zeilen[i][c]; if(v && !isFinite(zahl(v))) t++; });
+    if(t > nameTreffer){ nameTreffer = t; nameSpalte = c; }
+  }
+  const vjMuster = /vorjahr|vj\b|prior|previous|vorperiode|last year/i, saldoMuster = /saldo|schluss|ende|aktuell|balance|betrag|bestand|amount|closing|current/i;
+  // Date headers (e.g. 2026-12-31 / 2025-12-31): later date is current, earlier is prior
+  const alsDatum = t => { const m = /(\d{4})-(\d{2})-(\d{2})/.exec(t) || /(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(t);
+    if(!m) return null; return m[1].length === 4 ? m[1]+m[2]+m[3] : m[3]+m[2].padStart(2,"0")+m[1].padStart(2,"0"); };
+  const datiert = zahlSpalten.filter(s=>alsDatum(s.titel)).sort((a,b)=> alsDatum(b.titel).localeCompare(alsDatum(a.titel)));
+  if(datiert.length >= 2 && !zahlSpalten.some(s=>vjMuster.test(s.titel))){
+    return finish(datiert[0], datiert[1]);
+  }
+  const vorjahrSp = zahlSpalten.find(s=>vjMuster.test(s.titel));
+  const saldoSp = zahlSpalten.find(s=>saldoMuster.test(s.titel) && !vjMuster.test(s.titel) && !/budget|eröffnung|eroeffnung|opening|anfang/i.test(s.titel))
+               || zahlSpalten.find(s=>!vjMuster.test(s.titel) && !/budget/i.test(s.titel)) || zahlSpalten[0];
+  return finish(saldoSp, vorjahrSp);
+  function finish(saldoSp, vorjahrSp){
+  const konten = {}, doppelt = [];
+  kontoZeilen.forEach(i=>{
+    const z = zeilen[i], nr = String(z[besteSpalte]).trim();
+    const werte = {};
+    zahlSpalten.forEach(s=>{ const v = zahl(z[s.idx]); werte[s.idx] = isFinite(v) ? v : 0; });
+    if(konten[nr]){
+      doppelt.push(nr);
+      zahlSpalten.forEach(s=> konten[nr].werte[s.idx] = r2(konten[nr].werte[s.idx] + werte[s.idx]));
+    }else konten[nr] = {nr:nr, name: nameSpalte >= 0 ? String(z[nameSpalte]||"").trim() : "", werte:werte};
+  });
+  return {ok:true, kontoSpalte:besteSpalte, nameSpalte:nameSpalte, zahlSpalten:zahlSpalten,
+          vorschlagSaldo:saldoSp.idx, vorschlagVorjahr: vorjahrSp && vorjahrSp.idx !== saldoSp.idx ? vorjahrSp.idx : -1,
+          konten:Object.keys(konten).map(k=>konten[k]), ignoriert:ignoriert, doppelt:doppelt};
+  }
+}
+function natur(ix, nr){
+  const g = E.grp(ix, nr);
+  if(g) return (g.s === "A" || (g.s === "E" && g.vz !== -1)) ? "soll" : "haben";
+  const z = String(nr).charAt(0);
+  return (z === "2" || z === "3") ? "haben" : "soll";
+}
+function erkenneVorzeichen(analyse, spalte, ix){
+  let sp=0, sn=0, hp=0, hn=0;
+  analyse.konten.forEach(k=>{
+    const v = k.werte[spalte]; if(!v || !ix.km[k.nr]) return;
+    if(natur(ix, k.nr) === "soll"){ if(v > 0) sp++; else sn++; } else { if(v > 0) hp++; else hn++; }
+  });
+  const sollPos = sp+sn ? sp/(sp+sn) : 1, habenNeg = hp+hn ? hn/(hp+hn) : 0;
+  if(sollPos >= 0.6 && habenNeg >= 0.6) return "soll";
+  if(sollPos >= 0.6 && habenNeg <= 0.4) return "betrag";
+  if(sollPos <= 0.4 && habenNeg <= 0.4) return "haben";
+  return "soll";
+}
+function saldenAusImport(analyse, spalte, modus, ix, zuordnung){
+  zuordnung = zuordnung || {};
+  const salden = {}, unbekannt = [];
+  let mehrStellen = 0;
+  analyse.konten.forEach(k=>{
+    const v = k.werte[spalte] || 0;
+    if(nachkomma(v) > 2) mehrStellen++;
+    const bekannt = !!ix.km[k.nr] || !!zuordnung[k.nr];
+    const nat = ix.km[k.nr] ? natur(ix, k.nr) : (zuordnung[k.nr] ? zuordnung[k.nr].natur : natur(ix, k.nr));
+    const aktiv = ix.km[k.nr] ? (E.grp(ix,k.nr).s === "A") : (zuordnung[k.nr] ? zuordnung[k.nr].aktiv : parseFloat(k.nr) < 2000);
+    let s = modus === "haben" ? -v : (modus === "betrag" ? (nat === "soll" ? v : -v) : (modus === "darstellung" ? (aktiv ? v : -v) : v));
+    s = r2(s);
+    if(!bekannt){ if(Math.abs(s) >= 0.005) unbekannt.push({nr:k.nr, name:k.name, saldo:s}); return; }
+    if(Math.abs(s) >= 0.005) salden[k.nr] = r2((salden[k.nr]||0) + s);
+  });
+  return {salden:salden, unbekannt:unbekannt, mehrStellen:mehrStellen};
+}
+function pruefeSalden(salden, ix, extraGruppe){
+  let aktiven=0, passiven=0, ergebnis=0, er=0;
+  Object.keys(salden).forEach(nr=>{
+    const g = E.grp(ix, nr) || (extraGruppe && extraGruppe[nr]);
+    if(!g) return;
+    if(g.s === "A") aktiven = r2(aktiven + salden[nr]);
+    else if(g.s === "P") passiven = r2(passiven - salden[nr]);
+    else { ergebnis = r2(ergebnis - salden[nr]); er++; }
+  });
+  return {aktiven:aktiven, passiven:passiven, ergebnis:ergebnis, mitErfolg:er>0,
+          differenz: r2(aktiven - passiven - ergebnis)};
+}
+
+/* ---- Vergleich: fremde Daten in den aktuellen Aufbau bringen --------- */
+function mitStruktur(basis, fremd){
+  const bix = E.ctx(basis);
+  const konten = basis.konten.map(k=>Array.isArray(k)?k.slice():[k.nr,k.name,k.grp,k.cf,k.wkz]);
+  const fehlt = [];
+  E.konten(fremd).forEach(k=>{
+    if(bix.km[k.nr]) return;
+    if(bix.gm[k.grp]) konten.push([k.nr, k.name, k.grp, k.cf||null, k.wkz||null]);
+    else fehlt.push(k.nr);
+  });
+  const st = Object.assign({}, basis, {jahr:fremd.jahr, buchungen:fremd.buchungen, konten:konten});
+  const benutzt = {};
+  (fremd.buchungen||[]).forEach(b=>b.z.forEach(z=>benutzt[z[0]]=true));
+  return {state:st, unbekannt:fehlt.filter(nr=>benutzt[nr])};
+}
+function synthAusSalden(basis, salden, vorjahr, jahr){
+  const ix = E.ctx(basis);
+  const ein = Object.assign({}, EINSTELLUNGEN, basis.einstellungen||{});
+  const unbekannt = Object.keys(salden||{}).filter(nr=>!ix.km[nr]);
+  const nur = o => { const r = {}; Object.keys(o||{}).forEach(nr=>{ if(ix.km[nr] && Math.abs(o[nr])>=0.005) r[nr] = r2(o[nr]); }); return r; };
+  const s = nur(salden), v = vorjahr ? nur(vorjahr) : null;
+  const gv = ix.km[ein.gewinnvortrag] ? ein.gewinnvortrag
+           : (E.konten(basis).find(k=>{ const g = ix.gm[k.grp]; return g && g.sek === "EK"; })||{}).nr;
+  const zeilen = o => Object.keys(o).filter(nr=>Math.abs(o[nr])>=0.005).map(nr=> o[nr] > 0 ? [nr, o[nr], 0] : [nr, 0, r2(-o[nr])]);
+  const buchungen = [];
+  // Bilanz ohne Erfolgskonten: Differenz ist das nicht ausgewiesene Ergebnis
+  const hatER = Object.keys(s).some(nr=>E.istER(E.grp(ix,nr)));
+  if(!hatER && gv){ let sum = 0; Object.keys(s).forEach(nr=> sum = r2(sum + s[nr])); if(Math.abs(sum) >= 0.005) s[gv] = r2((s[gv]||0) - sum); }
+  let start = {};
+  if(v){
+    let erSum = 0;
+    Object.keys(v).forEach(nr=>{ if(E.istER(E.grp(ix,nr))) erSum = r2(erSum + v[nr]); else start[nr] = v[nr]; });
+    const hatVorER = Object.keys(v).some(nr=>E.istER(E.grp(ix,nr)));
+    if(!hatVorER && gv){ let sum = 0; Object.keys(start).forEach(nr=> sum = r2(sum + start[nr])); if(Math.abs(sum)>=0.005) start[gv] = r2((start[gv]||0) - sum); }
+    if(erSum && gv) start[gv] = r2((start[gv]||0) + erSum);
+    buchungen.push({id:"s-eb", datum:jahr+"-01-01", eb:true, beleg:"", text:"Opening from prior-year balances", z:zeilen(start)});
+  }
+  const bew = {};
+  Object.keys(s).forEach(nr=> bew[nr] = r2(s[nr] - (start[nr]||0)));
+  Object.keys(start).forEach(nr=>{ if(!(nr in s)) bew[nr] = r2(-start[nr]); });
+  if(v){
+    // Abschreibungen sichtbar machen: gegen ein Konto der Investitionstätigkeit
+    let d = 0; const ncZ = [];
+    Object.keys(bew).forEach(nr=>{ const g = E.grp(ix,nr); if(E.istER(g) && g.nc && bew[nr] > 0){ d = r2(d + bew[nr]); ncZ.push([nr, bew[nr], 0]); } });
+    const inv = Object.keys(Object.assign({}, start, s)).filter(nr=>{ const k = ix.km[nr]; return k && E.istBilanz(ix.gm[k.grp]) && E.cfKonto(ix,k) === "inv"; }).sort()[0];
+    if(d > 0 && inv){
+      buchungen.push({id:"s-abs", datum:jahr+"-12-31", beleg:"", text:"Depreciation", z:ncZ.concat([[inv, 0, d]])});
+      ncZ.forEach(z=> bew[z[0]] = r2(bew[z[0]] - z[1]));
+      bew[inv] = r2((bew[inv]||0) + d);
+    }
+  }
+  buchungen.push({id:"s-bew", datum:jahr+"-12-31", beleg:"", text:"Year figures", z:zeilen(bew)});
+  return {state:Object.assign({}, basis, {jahr:jahr, buchungen:buchungen, synthetisch:true}), gf:!!v, unbekannt:unbekannt};
+}
+
+/* ---- Vergleichsquellen ---------------------------------------------- */
+// kontext: {state, ix, datei:{state,name}|null}
+function hatJahr(state, j){ return (state.buchungen||[]).some(b=>b.datum && b.datum.slice(0,4) === String(j)); }
+function importQuelle(kontext, j){
+  const vj = (kontext.state.vergleichsjahre||[]);
+  const a = vj.find(v=>v.jahr === j); if(!a) return null;
+  const b = vj.find(v=>v.jahr === j-1);
+  const sy = synthAusSalden(kontext.state, a.salden, b ? b.salden : null, j);
+  return {art:"periode", state:sy.state, ix:E.ctx(sy.state), von:j+"-01-01", bis:j+"-12-31",
+          gf:sy.gf, label:"Closing "+j, jahresende:true, unbekannt:sy.unbekannt,
+          hinweis: sy.gf ? "" : "Cash flow "+j+" is only available once "+(j-1)+" is imported as well."};
+}
+function dateiQuelle(kontext, von, bis){
+  if(!kontext.datei) return null;
+  const m = mitStruktur(kontext.state, kontext.datei.state);
+  return {art:"periode", state:m.state, ix:E.ctx(m.state), von:von, bis:bis, gf:true,
+          label:(kontext.datei.name||"Comparison file"), unbekannt:m.unbekannt,
+          hinweis: m.unbekannt.length ? m.unbekannt.length+" account(s) of the comparison file are missing from the chart: "+m.unbekannt.join(", ") : ""};
+}
+// Vorjahr automatisch: eigene Buchungen, dann Vergleichsdatei, dann Import
+function vorjahrQuelle(kontext, von, bis, nurBilanz){
+  const j = parseInt(von.slice(0,4), 10);
+  if(hatJahr(kontext.state, j))
+    return {art:"periode", state:kontext.state, ix:kontext.ix, von:von, bis:bis, gf:true, label:j===parseInt(bis.slice(0,4),10)?String(j):""};
+  if(kontext.datei && kontext.datei.state.jahr === j){
+    const q = dateiQuelle(kontext, von, bis); q.label = String(j); return q;
+  }
+  const istJahresende = bis.slice(5) === "12-31" && von.slice(5) === "01-01";
+  if(istJahresende || nurBilanz){
+    const q = importQuelle(kontext, j);
+    if(q){ q.label = String(j); return q; }
+  }
+  return null;
+}
+function flachVon(q, typ){
+  if(!q || q.art !== "periode") return null;
+  if(typ === "bilanz")  return E.flachBilanz(E.bilanz(q.state, q.ix, q.von, q.bis));
+  if(typ === "erfolg")  return E.flachErfolg(E.erfolg(q.state, q.ix, q.von, q.bis));
+  return null;   // the cash flow has no comparison figures here (direct method, v5_cf_direkt.js)
+}
+function zeigenAus(m){
+  const s = new Set();
+  if(!m) return s;
+  Object.keys(m).forEach(k=>{
+    if(Math.abs(m[k]) < 0.005) return;
+    if(k.indexOf("k:") === 0) s.add(k.slice(2));
+    if(k.indexOf("z:") === 0) s.add(k);
+  });
+  return s;
+}
+
+/* ---- Kennzahlen ----------------------------------------------------- */
+function kennzahlen(state, ix, von, bis){
+  const b = E.bilanz(state, ix, von, bis), er = E.erfolg(state, ix, von, bis);
+  const s = E.saldoPer(state, bis);
+  let fonds = 0, fll = 0;
+  E.konten(state).forEach(k=>{
+    const g = ix.gm[k.grp]; if(!g || g.s !== "A") return;
+    const cf = E.cfKonto(ix, k);
+    if(cf === "fonds") fonds = r2(fonds + (s[k.nr]||0));
+    if(cf === "op_fll") fll = r2(fll + (s[k.nr]||0));
+  });
+  const sek = c => (b.aktiven.sektionen.concat(b.passiven.sektionen).find(x=>x.code===c)||{summe:0}).summe;
+  // Income, gross result and EBIT come from the file's own structure: the income groups (vz = -1 before the
+  // first expense group) and the subtotals named on the Structure page. Missing subtotal: ratio stays empty.
+  const erGruppen = (state.gruppen||[]).filter(E.istER);
+  let ertrag = 0;
+  for(const g of erGruppen){ if(g.vz !== -1) break; ertrag = r2(ertrag + (er.gruppenwert[g.c] || 0)); }
+  if(!ertrag) ertrag = er.ertrag;
+  const zwischen = muster => { const z = er.zeilen.find(x=> x.typ === "zwsum" && !x.block && muster.test(x.titel)); return z ? z.wert : null; };
+  const brutto = zwischen(/^(gross result|bruttoergebnis|bruttogewinn|rohertrag)$/i);
+  const ebit = zwischen(/^ebit$/i);
+  const q = (a,b) => (a === null || a === undefined || !b) ? null : a/b;
+  return {
+    bilanzsumme:b.aktiven.summe, eigenkapital:b.eigenkapital, fremdkapital:b.fremdkapital,
+    ekQuote:q(b.eigenkapital, b.aktiven.summe), fkQuote:q(b.fremdkapital, b.aktiven.summe),
+    liq1:q(fonds, sek("KFK")), liq2:q(fonds+fll, sek("KFK")),
+    anlagedeckung1:q(b.eigenkapital, sek("AV")),
+    ertrag:ertrag, bruttoMarge:q(brutto, ertrag), ebitMarge:q(ebit, ertrag),
+    umsatzrendite:q(er.ergebnis, ertrag), ekRendite:q(er.ergebnis, b.eigenkapital),
+    ergebnis:er.ergebnis, fonds:fonds
+  };
+}
+
+/* ---- Berichtsmodell: eine Quelle für PDF und Excel ------------------- */
+// opts: {art:"jahr"|"zwischen", bis:"YYYY-MM-DD", vergleich:"vorjahr"|"keine",
+//        detail:"gruppen"|"konten", teile:{deckblatt,bilanz,erfolg,geldfluss,kennzahlen,salden}}
+function bericht(kontext, opts){
+  const st = kontext.state, ix = kontext.ix, j = st.jahr;
+  const bis = opts.art === "jahr" ? j+"-12-31" : opts.bis;
+  const von = j+"-01-01";
+  const vj = j-1;
+  const vglBil = opts.vergleich === "vorjahr" ? vorjahrQuelle(kontext, vj+"-01-01", vj+"-12-31", true) : null;
+  const vglErf = opts.vergleich === "vorjahr" ? vorjahrQuelle(kontext, vj+"-01-01", datumPlusMonate(bis, -12), opts.art === "jahr") : null;
+  const hinweise = [];
+  if(opts.vergleich === "vorjahr"){
+    if(!vglBil) hinweise.push("There are no prior-year figures "+vj+" for the balance sheet.");
+    if(!vglErf) hinweise.push(opts.art === "jahr"
+      ? "There are no prior-year figures "+vj+" for the income statement."
+      : "There are no bookings for the prior-year period "+vj+"; imported closings only hold full-year figures.");
+    if(vglErf && vglErf.gf === false) hinweise.push(vglErf.hinweis);
+    [vglBil, vglErf].forEach(q=>{ if(q && q.unbekannt && q.unbekannt.length) hinweise.push("Comparison: "+q.unbekannt.length+" account(s) without a match in the chart ("+q.unbekannt.join(", ")+")."); });
+  }
+  const mB = flachVon(vglBil, "bilanz"), mE = flachVon(vglErf, "erfolg"), mG = null;
+  const zeile = (typ, nr, text, w, v, ebene) => {
+    const d = (v === null || v === undefined) ? null : r2(w - v);
+    return {typ:typ, nr:nr||"", text:text, w:r2(w), v:(v===null||v===undefined)?null:r2(v), d:d,
+            p:(d === null || !v) ? null : d/Math.abs(v), ebene:ebene||typ};
+  };
+  const vw = (m, k) => m ? (m[k] === undefined ? 0 : m[k]) : null;
+
+  const kopf = {
+    mandant:st.mandant, waehrung:st.waehrung||"CHF",
+    titel: opts.art === "jahr" ? "Annual statements "+j : "Interim statements as of "+bis.split("-").reverse().join("."),
+    stichtag:bis, von:von,
+    spalteW: opts.art === "jahr" ? String(j) : bis.split("-").reverse().join("."),
+    spalteBilV: vglBil ? "31.12."+vj : null,
+    spalteErfW: opts.art === "jahr" ? String(j) : "01.01.–"+bis.slice(8)+"."+bis.slice(5,7)+"."+j,
+    spalteErfV: vglErf ? (opts.art === "jahr" ? String(vj) : "01.01.–"+datumPlusMonate(bis,-12).split("-").reverse().join(".")) : null,
+    status: opts.status || "entwurf", ersteller: opts.ersteller || "", erstellt: opts.erstellt || "",
+    hinweise: hinweise
+  };
+
+  const abschnitte = [];
+  if(opts.teile.bilanz){
+    const b = E.bilanz(st, ix, von, bis, zeigenAus(mB));
+    const z = [];
+    [b.aktiven, b.passiven].forEach(teil=>{
+      z.push(zeile("seite","",teil.titel,0,null));
+      teil.sektionen.forEach(s=>{
+        if(!s.gruppen.length && !s.mitErgebnis) return;
+        z.push(zeile("bereich","",s.titel,0,null));
+        s.gruppen.forEach(g=>{
+          if(opts.detail === "konten"){
+            g.konten.forEach(k=> z.push(zeile("konto",k.nr,k.name,k.wert,vw(mB,"k:"+k.nr))));
+            if(g.st === "immer" || (g.st !== "nie" && g.konten.length > 1)) z.push(zeile("gruppe","",g.titel,g.summe,vw(mB,"grp:"+g.code)));
+          }else z.push(zeile("position","",g.titel,g.summe,vw(mB,"grp:"+g.code)));
+        });
+        if(s.mitErgebnis) z.push(zeile(opts.detail==="konten"?"konto":"position","",st.titel.ergebnis||"Result for the period",b.ergebnis,vw(mB,"ergebnis")));
+        z.push(zeile("summe","","Total "+s.titel,s.summe,vw(mB,"sek:"+s.code)));
+      });
+      z.push(zeile("total","","Total "+teil.titel,teil.summe,vw(mB, teil===b.aktiven?"aktiven":"passiven")));
+    });
+    abschnitte.push({id:"bilanz", titel:"Balance sheet", spalteW:kopf.spalteW, spalteV:kopf.spalteBilV, zeilen:z, differenz:b.differenz});
+  }
+  if(opts.teile.erfolg){
+    const er = E.erfolg(st, ix, von, bis, null, zeigenAus(mE));
+    const z = [];
+    er.zeilen.forEach(x=>{
+      if(x.typ === "gruppe"){
+        if(!x.konten.length && Math.abs(x.wert)<0.005 && !(mE && Math.abs(mE["grp:"+x.code]||0)>=0.005)) return;
+        if(opts.detail === "konten"){
+          z.push(zeile("bereich","",x.titel,0,null));
+          x.konten.forEach(k=> z.push(zeile("konto",k.nr,k.name,k.wert,vw(mE,"k:"+k.nr))));
+          z.push(zeile("gruppe","","Total "+x.titel,x.wert,vw(mE,"grp:"+x.code)));
+        }else z.push(zeile("position","",x.titel,x.wert,vw(mE,"grp:"+x.code)));
+      }else z.push(zeile(x.typ==="total"?"total":"summe","",x.titel,x.wert,vw(mE,x.code)));
+    });
+    abschnitte.push({id:"erfolg", titel:"Income statement", spalteW:kopf.spalteErfW, spalteV:kopf.spalteErfV, zeilen:z});
+  }
+  if(opts.teile.kennzahlen){
+    const k = kennzahlen(st, ix, von, bis);
+    const kv = vglErf ? kennzahlen(vglErf.state, vglErf.ix, vglErf.von, vglErf.bis) : null;
+    const kb = vglBil ? kennzahlen(vglBil.state, vglBil.ix, vglBil.von, vglBil.bis) : null;
+    const L = [
+      ["Eigenkapitalquote","ekQuote","%",kb],["Fremdfinanzierungsgrad","fkQuote","%",kb],
+      ["Liquiditätsgrad 1","liq1","%",kb],["Liquiditätsgrad 2","liq2","%",kb],
+      ["Anlagedeckungsgrad 1","anlagedeckung1","%",kb],
+      ["Bruttomarge","bruttoMarge","%",kv],["EBIT-Marge","ebitMarge","%",kv],
+      ["Umsatzrendite","umsatzrendite","%",kv],["Eigenkapitalrendite","ekRendite","%",kv]
+    ];
+    abschnitte.push({id:"kennzahlen", titel:"Key figures", spalteW:kopf.spalteW, spalteV:(kv||kb)?String(vj):null,
+      zeilen: L.map(x=>({typ:"kennzahl", text:x[0], einheit:x[2], w:k[x[1]], v: x[3] ? x[3][x[1]] : null}))});
+  }
+  if(opts.teile.salden){
+    const sW = E.saldoPer(st, bis), bW = E.bewegung(st, von, bis);
+    const sV = vglBil ? E.saldoPer(vglBil.state, vglBil.bis) : null;
+    const bV = vglErf ? E.bewegung(vglErf.state, vglErf.von, vglErf.bis) : null;
+    const z = [];
+    E.konten(st).slice().sort((a,b)=>a.nr.localeCompare(b.nr,"de",{numeric:true})).forEach(k=>{
+      const g = ix.gm[k.grp]; if(!g) return;
+      const er = g.s === "E";
+      const w = er ? r2(((bW[k.nr]||{}).soll||0) - ((bW[k.nr]||{}).haben||0)) : r2(sW[k.nr]||0);
+      const v = er ? (bV ? r2(((bV[k.nr]||{}).soll||0) - ((bV[k.nr]||{}).haben||0)) : null) : (sV ? r2(sV[k.nr]||0) : null);
+      if(Math.abs(w) < 0.005 && !(v && Math.abs(v) >= 0.005)) return;
+      z.push({typ:"saldo", nr:k.nr, text:k.name, gruppe:g.t, w:w, v:v});
+    });
+    abschnitte.push({id:"salden", titel:"Trial balance", spalteW:kopf.spalteW, spalteV:(vglBil||vglErf)?String(vj):null, zeilen:z});
+  }
+  return {kopf:kopf, abschnitte:abschnitte};
+}
+
+
+/* ---- Fast entry: dates and amounts ---------------------------------- */
+// "15" -> 15th of the base month, "15.3" -> base year, "15.3.26", "15.03.2026", "1503", "150326"
+function datumAusEingabe(t, basis){
+  t = String(t==null?"":t).trim();
+  if(!t) return null;
+  if(istDatum(t)) return t;
+  const b = istDatum(basis) ? basis : null, jetzt = new Date();
+  const by = b ? +b.slice(0,4) : jetzt.getFullYear(), bm = b ? +b.slice(5,7) : jetzt.getMonth()+1;
+  let m, d, mo, y;
+  if((m = /^(\d{1,2})\.?$/.exec(t)))                                   { d=+m[1]; mo=bm; y=by; }
+  else if((m = /^(\d{1,2})[.\/-](\d{1,2})\.?$/.exec(t)))               { d=+m[1]; mo=+m[2]; y=by; }
+  else if((m = /^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2}|\d{4})$/.exec(t))){ d=+m[1]; mo=+m[2]; y=+m[3]; if(y<100) y+=2000; }
+  else if((m = /^(\d{2})(\d{2})(\d{2}|\d{4})?$/.exec(t)))              { d=+m[1]; mo=+m[2]; y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : by; }
+  else return null;
+  const iso = y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+  return istDatum(iso) ? iso : null;
+}
+// Plain numbers in any Swiss/German/English format, or simple arithmetic like "70+30" or "1200/12"
+function betragAusEingabe(t){
+  if(typeof t === "number") return isFinite(t) ? t : NaN;
+  const roh = String(t==null?"":t).trim();
+  if(!roh) return NaN;
+  const direkt = zahl(roh);
+  if(isFinite(direkt)) return direkt;
+  const norm = roh.replace(/[\u2212\u2013]/g,"-");
+  const tokens = norm.match(/\d[\d'’\u00A0 .,]*|[+\-*\/()]/g);
+  if(!tokens || tokens.join("").replace(/\s/g,"") !== norm.replace(/\s/g,"")) return NaN;
+  let expr = "";
+  for(const tk of tokens){
+    if(/^\d/.test(tk)){ const n = zahl(tk); if(!isFinite(n)) return NaN; expr += "("+n+")"; }
+    else expr += tk;
+  }
+  try{ const v = Function('"use strict";return ('+expr+')')(); return (typeof v === "number" && isFinite(v)) ? v : NaN; }
+  catch(e){ return NaN; }
+}
+
+/* ---- Opening balance from a closing list ---------------------------- */
+// Balance sheet accounts carry over; all equity accounts plus the result of the
+// closed year roll into the equity-at-beginning account (2800).
+function eroeffnungAusSalden(state, ix, salden){
+  const ein = Object.assign({}, EINSTELLUNGEN, state.einstellungen||{});
+  const gv = ix.km[ein.gewinnvortrag] ? ein.gewinnvortrag : null;
+  const z = {}; let er = 0, ek = 0; const unbekannt = [];
+  Object.keys(salden||{}).forEach(nr=>{
+    const v = r2(salden[nr]); if(Math.abs(v) < .005) return;
+    const g = E.grp(ix, nr);
+    if(!g){ unbekannt.push(nr); return; }
+    if(g.s === "E") er = r2(er + v);
+    else if(g.sek === "EK") ek = r2(ek + v);
+    else z[nr] = r2((z[nr]||0) + v);
+  });
+  if(gv){ const neu = r2(ek + er); if(Math.abs(neu) >= .005) z[gv] = r2((z[gv]||0) + neu); }
+  let summe = 0; Object.keys(z).forEach(nr=> summe = r2(summe + z[nr]));
+  const zeilen = Object.keys(z).filter(nr=>Math.abs(z[nr])>=.005).sort((a,b)=>parseFloat(a)-parseFloat(b))
+    .map(nr=> z[nr] > 0 ? [nr, z[nr], 0] : [nr, 0, r2(-z[nr])]);
+  return {zeilen:zeilen, ergebnis:r2(-er), eigenkapital:r2(-(ek+er)), gewinnvortrag:gv, unbekannt:unbekannt, differenz:summe};
+}
+
+/* ---- Excel layout read by the Financial Statements file -------------- */
+// Column A account number (numeric), B description, C current, D prior year.
+// Signs as in the annual statements: accounts below 2000 as they are, all others reversed.
+function fsWerte(state, ix, von, bis){
+  const s = saldoPerSicher(state, bis), b = E.bewegung(state, von, bis), m = {};
+  E.konten(state).forEach(k=>{
+    const g = ix.gm[k.grp]; if(!g) return;
+    const saldo = g.s === "E" ? r2(((b[k.nr]||{}).soll||0) - ((b[k.nr]||{}).haben||0)) : r2(s[k.nr]||0);
+    if(Math.abs(saldo) < .005) return;
+    m[k.nr] = parseFloat(k.nr) < 2000 ? saldo : r2(-saldo);
+  });
+  return m;
+}
+function saldoPerSicher(state, bis){ return E.saldoPer(state, bis); }
+function fsExport(kontext, opts){
+  opts = opts || {};
+  const st = kontext.state, ix = kontext.ix, j = st.jahr;
+  const bis = opts.bis || (j+"-12-31");
+  const cur = fsWerte(st, ix, j+"-01-01", bis);
+  let prior = null, hinweis = "";
+  if(opts.vorjahr){
+    const q = vorjahrQuelle(kontext, (j-1)+"-01-01", (j-1)+"-12-31", true);
+    if(q) prior = fsWerte(q.state, q.ix, q.von, q.bis);
+    else hinweis = "There are no figures for "+(j-1)+", so the file has no prior-year column.";
+  }
+  const nrs = Array.from(new Set(Object.keys(cur).concat(prior ? Object.keys(prior) : []))).sort((a,b)=>parseFloat(a)-parseFloat(b));
+  const name = nr => (ix.km[nr] || {}).name || ("Account "+nr);
+  const zeilen = [[st.mandant||""], ["BILANZ UND ERFOLGSRECHNUNG"], [], ["Account","Description", bis].concat(prior ? [(j-1)+"-12-31"] : [])];
+  nrs.forEach(nr=> zeilen.push([parseFloat(nr), name(nr), cur[nr]||0].concat(prior ? [prior[nr]||0] : [])));
+  const pruef = m => { let a = 0, r = 0; Object.keys(m).forEach(nr=>{ if(parseFloat(nr) < 2000) a = r2(a + m[nr]); else r = r2(r + m[nr]); }); return r2(a - r); };
+  let ergebnis = 0; Object.keys(cur).forEach(nr=>{ if(parseFloat(nr) >= 3000) ergebnis = r2(ergebnis + cur[nr]); });
+  return {blatt:("BuHa "+(st.mandant||"")+" "+j).slice(0,31), zeilen:zeilen, anzahl:nrs.length,
+          differenz:pruef(cur), differenzVJ: prior ? pruef(prior) : 0, ergebnis:ergebnis, hinweis:hinweis, mitVorjahr:!!prior};
+}
+
+/* ---- Twelve-month report -------------------------------------------- */
+function monatsbericht(state, ix){
+  const j = state.jahr, monate = [];
+  for(let m=1; m<=12; m++) monate.push({m:m, von:j+"-"+String(m).padStart(2,"0")+"-01", bis:E.letzterTag(j,m), kurz:E.MONATE[m-1].slice(0,3)});
+  const kl = E.klassierung(state, ix);
+  const fb = monate.map(x=> E.flachBilanz(E.bilanz(state, ix, j+"-01-01", x.bis)));
+  const fe = monate.map(x=> E.flachErfolg(E.erfolg(state, ix, x.von, x.bis, kl)));
+  const zB = new Set(), zE = new Set();
+  fb.forEach(m=> Object.keys(m).forEach(k=>{ if(k.indexOf("k:")===0 && Math.abs(m[k])>=.005) zB.add(k.slice(2)); }));
+  fe.forEach(m=> Object.keys(m).forEach(k=>{ if(k.indexOf("k:")===0 && Math.abs(m[k])>=.005) zE.add(k.slice(2)); }));
+  const bj = E.bilanz(state, ix, j+"-01-01", j+"-12-31", zB);
+  const ej = E.erfolg(state, ix, j+"-01-01", j+"-12-31", kl, zE);
+  const reihe = (maps, key) => maps.map(m=> m[key] === undefined ? 0 : m[key]);
+  const bil = [];
+  [bj.aktiven, bj.passiven].forEach((teil, ti)=>{
+    bil.push({typ:"seite", text:teil.titel});
+    teil.sektionen.forEach(s=>{
+      if(!s.gruppen.length && !s.mitErgebnis) return;
+      bil.push({typ:"bereich", text:s.titel});
+      s.gruppen.forEach(g=>{
+        if(g.konten.length > 1 || g.st === "immer") bil.push({typ:"gruppe", text:g.titel, werte:reihe(fb,"grp:"+g.code)});
+        g.konten.forEach(k=> bil.push({typ:"konto", nr:k.nr, text:k.name, werte:reihe(fb,"k:"+k.nr), einzug:g.konten.length > 1 || g.st === "immer"}));
+      });
+      if(s.mitErgebnis) bil.push({typ:"konto", nr:"", text:(state.titel&&state.titel.ergebnis)||"Result for the period", werte:reihe(fb,"ergebnis")});
+      bil.push({typ:"summe", text:"Total "+s.titel.toLowerCase(), werte:reihe(fb,"sek:"+s.code)});
+    });
+    bil.push({typ:"total", text:"Total "+teil.titel.toLowerCase(), werte:reihe(fb, ti===0 ? "aktiven" : "passiven")});
+  });
+  const erf = [];
+  ej.zeilen.forEach(x=>{
+    if(x.typ === "gruppe"){
+      if(!x.konten.length) return;
+      erf.push({typ:"gruppe", code:x.code, text:x.titel, werte:reihe(fe,"grp:"+x.code), total:x.wert});
+      x.konten.forEach(k=> erf.push({typ:"konto", nr:k.nr, text:k.name, werte:reihe(fe,"k:"+k.nr), total:k.wert, einzug:true}));
+    }else erf.push({typ: x.typ === "total" ? "total" : "summe", text:x.titel, werte:reihe(fe,x.code), total:x.wert});
+  });
+  return {jahr:j, monate:monate, bilanz:bil, erfolg:erf};
+}
+
+/* ---- Statement structure for the statement pages ------------------------
+   One source of truth: the groups on the Structure page. The balance sheet
+   lists the groups of every section with the section's total, total assets,
+   total liabilities, equity with the result of the period, and the grand
+   total. The income statement lists the groups in order, a block total where
+   a group names one, a running subtotal where a group names one, and the
+   result at the end. Node kinds as the statements engine reads them:
+   sec = heading, g = group (drillable), s = subtotal, r = result line,
+   t = grand total, sp = spacer. Ids the app relies on stay fixed: CA, NCA,
+   TA, STL, LTL, TL, EQ, TLE, NP and FONDS (the cash groups); well-known
+   subtotals keep their ids by title (TI, GR, EBITDA, EBIT, EBT).            */
+const SEK_ID = {UV:"CA", AV:"NCA", KFK:"STL", LFK:"LTL", EK:"EQ"};
+const ZW_ID = [[/^(total )?(income|revenue|ertrag|erträge|einnahmen)$/i, "TI"], [/^gross result$|^gross profit$|^bruttoergebnis$|^bruttogewinn$|^rohertrag$/i, "GR"],
+  [/^gross result i$|^bruttoergebnis i$/i, "GR1"], [/^ebitda$/i, "EBITDA"], [/^ebit$/i, "EBIT"], [/\bebt\b|before tax|vor steuern/i, "EBT"],
+  [/^total other operating expenses$|^total operating expenses$|^betriebsaufwand$/i, "TOE"]];
+function abschlussStruktur(state){
+  const sek = Object.assign({}, state.sektionen||{}), titel = state.titel||{};
+  const gruppen = state.gruppen||[];
+  const node = g => { const n = {k:"g", id:g.c, l:g.t, r:(g.r||[]).map(x=>x.slice())}; if(g.s === "P" && g.sek !== "EK") n.inv = 1; return n; };   // inv: a rising liability is coloured as a worsening
+  const total = s => "Total "+String(s||"").toLowerCase();
+  const BS = [{k:"sec", l:titel.aktiven || "Assets"}];
+  const seite = (codes, mitErgebnis) => {
+    const ids = [];
+    codes.forEach(code=>{
+      const gs = gruppen.filter(g=> E.istBilanz(g) && g.sek === code);
+      if(!gs.length && !(mitErgebnis && code === "EK")) return;
+      gs.forEach(g=> BS.push(node(g)));
+      const of = gs.map(g=>g.c), id = SEK_ID[code] || ("SEK_"+code);
+      if(mitErgebnis && code === "EK"){ BS.push({k:"g", id:"Q3", l:titel.ergebnis || "Result for the period", calc:"profit"}); of.push("Q3"); }
+      const sub = {k:"s", id:id, l:total(sek[code]||code), of:of}; if(E.SEK_PASSIV.indexOf(code) >= 0 && code !== "EK") sub.inv = 1;
+      BS.push(sub);
+      ids.push(id);
+      BS.push({k:"sp"});
+    });
+    return ids;
+  };
+  const aktiv = seite(E.SEK_AKTIV, false);
+  BS.pop();                                                     // no spacer before the total
+  BS.push({k:"t", id:"TA", l:total(titel.aktiven || "Assets"), of:aktiv}, {k:"sp"}, {k:"sec", l:titel.passiven || "Liabilities and equity"});
+  const fk = seite(E.SEK_PASSIV.filter(c=> c !== "EK"), false);
+  BS.pop();
+  BS.push({k:"s", id:"TL", l:"Total liabilities", of:fk, inv:1}, {k:"sp"});
+  seite(["EK"], true);
+  BS.pop();
+  BS.push({k:"t", id:"TLE", l:total(titel.passiven || "Liabilities and equity"), of:fk.length ? ["TL","EQ"] : ["EQ"]});
+
+  const IS = [];
+  let seitLauf = [], block = [], lauf = null;
+  const zwId = (t, c) => { const w = ZW_ID.find(x=> x[0].test(String(t).trim())); return w && !IS.some(n=> n.id === w[1]) ? w[1] : "ZW_"+c; };
+  gruppen.filter(E.istER).forEach(g=>{
+    IS.push(node(g)); seitLauf.push(g.c); block.push(g.c);
+    if(g.zwBlock){
+      const id = zwId(g.zwBlock, "B"+g.c);
+      IS.push({k:"s", id:id, l:g.zwBlock, of:block.slice()});
+      seitLauf = seitLauf.filter(x=> block.indexOf(x) < 0).concat([id]);   // the block stands for its groups
+      block = [];
+    }
+    if(g.zw){
+      const id = zwId(g.zw, g.c), of = (lauf ? [lauf] : []).concat(seitLauf);
+      IS.push({k: lauf ? "r" : "s", id:id, l:g.zw, of:of});
+      IS.push({k:"sp"});
+      lauf = id; seitLauf = []; block = [];
+    }
+  });
+  IS.push({k:"t", id:"NP", l:titel.ergebnis || "Result for the period", of:(lauf ? [lauf] : []).concat(seitLauf), sign:1});
+  const fonds = gruppen.filter(g=> E.istBilanz(g) && g.cf === "fonds").map(g=>g.c);
+  return {BS:BS, IS:IS, FONDS:{k:"s", id:"FONDS", l:"Cash and cash equivalents", of:fonds}};
+}
+// Cash flow class of every account in the chart, from its own cash-flow setting or its group's: the buckets of the
+// Structure page mapped onto the six classes the statements engine knows.
+const BUCKET_KLASSE = {fonds:"cash", cash:"cash", inv:"invest", op_fll:"opAsset", op_vor:"opAsset", op_uea:"opAsset",
+  op_vll:"opLiab", op_uep:"opLiab", rst:"opLiab", fin:"finLiab", ek:"equity"};
+function cfKlassen(state, ix){
+  const m = {};
+  E.konten(state).forEach(k=>{
+    const g = ix.gm[k.grp]; if(!g || !E.istBilanz(g)) return;
+    const b = (k.cf && k.cf !== "nc") ? k.cf : g.cf;
+    const kl = BUCKET_KLASSE[b];
+    if(kl) m[k.nr] = kl;
+    else if(g.sek === "EK") m[k.nr] = "equity";
+    else m[k.nr] = g.s === "A" ? "opAsset" : "opLiab";
+  });
+  return m;
+}
+// investment candidates for the investments page: accounts of the investing class whose group holds financial
+// assets, not property or equipment
+const SACHANLAGEN = /movable|immovable|intangible|property|equipment|vehicle|sachanlage|mobilien|immobilien|fahrzeug|liegenschaft|immaterielle/i;
+function anlageKandidaten(state, ix, klasse){
+  return E.konten(state).filter(k=>{ const g = ix.gm[k.grp]; return g && g.s === "A" && klasse[k.nr] === "invest" && !SACHANLAGEN.test(g.t||""); }).map(k=>k.nr);
+}
+
+/* ---- Year-end check before closing ------------------------------------
+   Nothing here blocks the close; these are the things a closing checklist
+   looks at: clearing accounts at zero, in-year accrual accounts at zero,
+   foreign-currency balances revalued, no balance on the wrong side, every
+   spread of the year either released or carried over.                      */
+function abschlussPruefung(state, ix, J){
+  const w = [], bis = J+"-12-31", s = E.saldoPer(state, bis);
+  const ein = Object.assign({}, EINSTELLUNGEN, state.einstellungen||{});
+  const name = nr => (ix.km[nr] ? ix.km[nr].name : nr);
+  const betrag = v => (v < 0 ? "\u2212" : "") + Math.abs(v).toFixed(2);
+  const kontra = /\bwb\b|wertberichtigung|abschreibung|delkredere|kumuliert|allowance|accumulated|depreciation|auf-?\s*und\s*abwertung|aufwertung|abwertung|nicht realisiert|unrealised|value adjustment/i;
+  const klaerung = /transfer|abkl[aä]rung|clearing|durchlauf|suspense|open items|clarification/i;
+  E.konten(state).forEach(k=>{
+    const g = ix.gm[k.grp]; if(!g || !E.istBilanz(g)) return;
+    const v = r2(s[k.nr] || 0); if(Math.abs(v) < .005) return;
+    if(klaerung.test(k.name) || klaerung.test(g.t))
+      w.push("Clearing account "+k.nr+" "+k.name+" still carries "+betrag(v)+" at 31.12."+J+".");
+    if(k.nr === ein.araJahr || k.nr === ein.praJahr)
+      w.push("In-year accrual account "+k.nr+" should be zero at 31.12."+J+" but carries "+betrag(v)+".");
+    if(g.s === "A" && v < 0 && !kontra.test(k.name))
+      w.push("Asset account "+k.nr+" "+k.name+" has a credit balance ("+betrag(v)+"). A liability?");
+    if(g.s === "P" && g.sek !== "EK" && v > 0)
+      w.push("Liability account "+k.nr+" "+k.name+" has a debit balance ("+betrag(v)+"). A receivable?");
+  });
+  (E.neubewertung(state, ix, bis, state.kurse||{})||[]).forEach(z=>{
+    if(Math.abs(z.differenz) >= .05) w.push("Foreign currency: "+z.nr+" "+z.name+" is booked at "+betrag(z.buchwert)+"; at the rate in the file ("+z.wkz+" "+z.kurs+") it is "+betrag(z.neuwert)+", difference "+betrag(z.differenz)+". Set the year-end rate and book the revaluation under Accounts, Foreign currencies.");
+  });
+  const jahr = Object.assign({}, state, {jahr:J});
+  plaene(jahr, ix).forEach(p=>{
+    if(!p.datum || p.datum.slice(0,4) !== String(J) || Math.abs(p.rest) < .005) return;
+    const traeger = (state.buchungen||[]).some(b=> b.plan && b.plan.id === p.id && b.plan.rolle === "uebertrag");
+    const altAufAra = (state.buchungen||[]).some(b=> b.plan && b.plan.id === p.id && b.plan.rolle === "basis" && b.z.some(z=> z[0] === ein.ara || z[0] === ein.pra));
+    if(!traeger && !altAufAra) w.push("Spread \u201c"+p.text+"\u201d has "+betrag(p.rest)+" left and no carry-over at 31.12."+J+".");
+  });
+  // accrual balance at 31.12. that no spread plan explains: booked by hand, so nothing continues it next year.
+  // A plan covers its rest as at 31.12.J (base amount less the releases up to then) when its months run past J.
+  const proPlanJ = {};
+  (state.buchungen||[]).forEach(b=>{ if(b && b.plan && b.plan.id && b.datum <= bis) (proPlanJ[b.plan.id] = proPlanJ[b.plan.id] || []).push(b); });
+  const abgrJ = (b, nr, nrJ) => b.z.reduce((a,z)=> (z[0] === nr || (nrJ && z[0] === nrJ)) ? r2(a + (z[1]||0) - (z[2]||0)) : a, 0);
+  [[ein.ara, ein.araJahr, 1], [ein.pra, ein.praJahr, -1]].forEach(([nr, nrJ, vz])=>{
+    if(!nr || !ix.km[nr]) return;
+    const saldo = r2(vz * (s[nr]||0)); if(saldo < .005) return;
+    let gedeckt = 0;
+    Object.keys(proPlanJ).forEach(id=>{
+      const bs = proPlanJ[id], basis = bs.find(b=> b.plan.rolle === "basis"); if(!basis || !basis.plan.start || !(basis.plan.monate >= 2)) return;
+      if(monatPlus(basis.plan.start, basis.plan.monate - 1).slice(0,4) <= String(J)) return;      // ends within J: nothing to carry
+      let rest = 0; bs.forEach(b=>{ if(b.plan.rolle !== "uebertrag") rest = r2(rest + vz * abgrJ(b, nr, nrJ)); });
+      if(rest > .005) gedeckt = r2(gedeckt + rest);
+    });
+    const frei = r2(saldo - gedeckt);
+    if(frei > .05) w.push("Account "+nr+" carries "+betrag(saldo)+" at 31.12."+J+"; "+betrag(frei)+" of it belongs to no spread plan (booked by hand) and will not be released automatically in "+(J+1)+".");
+  });
+  anlagen(state).forEach(roh=>{
+    const a = anlageNorm(roh); if(a.datum > bis || a.ab > J+"-12") return;
+    const st = anlageStand(state, a, bis);
+    if(!st.abgegangen && Math.abs(st.fehlt) >= .005) w.push("Fixed asset \u201c"+a.text+"\u201d: depreciation for "+J+" differs from the schedule by "+betrag(st.fehlt)+". Open Fixed assets and continue it.");
+  });
+  const imRegister = new Set(anlagen(state).map(a=> String(a.konto)));
+  const abAcc = E.konten(state).filter(k=>{ const g = ix.gm[k.grp]; return g && g.s === "A" && (istAnlageGruppe(g) || /^15|^16|^17/.test(k.nr)) && !istKontraName(k.name) && Math.abs(s[k.nr]||0) > 1 && !imRegister.has(k.nr); });
+  if(abAcc.length){
+    const bew = E.bewegung(state, J+"-01-01", bis);
+    const abschr = E.konten(state).some(k=>{ const g = ix.gm[k.grp]; return g && E.istER(g) && /abschreib|depreciation|amortis/i.test(k.name) && bew[k.nr] && (bew[k.nr].soll || bew[k.nr].haben); });
+    if(!abschr) w.push("Fixed assets are on the balance sheet ("+abAcc.map(k=> k.nr).join(", ")+") but not in the register, and no depreciation was booked in "+J+".");
+  }
+  return w;
+}
+
+/* ---- Fixed assets: register and depreciation ----------------------------
+   state.anlagen holds one entry per asset:
+   {id, text, konto, wb, aufwand, datum, start, monate, kosten, restwert, rhythmus,
+    ab, vorher, status, abgang:{datum, erloes, konto}}
+   konto     the asset account carrying the cost; wb its contra account for the
+             accumulated depreciation (empty: the asset account is written down)
+   aufwand   the depreciation expense account
+   datum     acquisition date; start the first month of depreciation (YYYY-MM)
+   monate    useful life in months, restwert the residual value
+   rhythmus  "monat": one booking per month end; "jahr": one booking at 31.12.
+   ab        the first month this register books (YYYY-MM). Depreciation booked
+             by hand for earlier months is entered once as `vorher`.
+   Straight-line to the residual value. The depreciation bookings carry
+   plan {id, rolle:"abschreibung", ab, nr, von, monat}: ab and nr are the first
+   and last month index (1-based) the booking covers. Bookings of closed years
+   are fixed; the remainder is spread evenly over the open months, which is the
+   prospective treatment of a changed estimate (OR 960a, FER 18). A disposal
+   stops the depreciation after the month of disposal; the asset is derecognised
+   with the gain or loss against the result (plan rolle "abgang").             */
+const ANLAGE_STANDARD = {wb:"", rhythmus:"monat", restwert:0, vorher:0, status:"aktiv"};
+// a contra account is named as one from the start ("Abschreibungen und WB Auto", "WB Informatik"); an asset
+// whose name merely mentions its depreciation rule ("Auto (Abschreibung bis Restwert …)") is not
+const istKontraName = n => /^\s*(abschreibung(en)?|abschr\.?|wb|wertberichtigung(en)?|kumulierte|accumulated|allowance|delkredere)\b/i.test(String(n||""));
+function anlagen(state){ return (state.anlagen||[]).filter(a=> a && a.id); }
+function anlageNorm(a){
+  const o = Object.assign({}, ANLAGE_STANDARD, a||{});
+  o.id = String(o.id||""); o.text = String(o.text||""); o.konto = String(o.konto||""); o.wb = String(o.wb||""); o.aufwand = String(o.aufwand||"");
+  o.datum = istDatum(o.datum) ? o.datum : (reparDatum(o.datum)||""); o.start = /^\d{4}-\d{2}$/.test(o.start||"") ? o.start : (o.datum ? o.datum.slice(0,7) : "");
+  o.ab = /^\d{4}-\d{2}$/.test(o.ab||"") ? o.ab : o.start;
+  o.monate = parseInt(o.monate, 10) || 0; o.kosten = r2(zahl(o.kosten)||0); o.restwert = r2(zahl(o.restwert)||0); o.vorher = r2(zahl(o.vorher)||0);
+  o.rhythmus = o.rhythmus === "jahr" ? "jahr" : "monat"; o.status = o.status === "abgegangen" ? "abgegangen" : "aktiv";
+  if(o.abgang && typeof o.abgang === "object"){ o.abgang = {datum:reparDatum(o.abgang.datum)||"", erloes:r2(zahl(o.abgang.erloes)||0), konto:String(o.abgang.konto||"")}; if(!o.abgang.datum) delete o.abgang; }
+  else delete o.abgang;
+  return o;
+}
+function anlagePruefen(a, ix){
+  const f = [];
+  if(!a.text) f.push("Give the asset a name.");
+  if(!ix.km[a.konto]) f.push("Choose the asset account.");
+  if(a.wb && !ix.km[a.wb]) f.push("The contra account "+a.wb+" is not in the chart of accounts.");
+  if(!ix.km[a.aufwand]) f.push("Choose the depreciation account.");
+  if(!istDatum(a.datum)) f.push("Enter a valid acquisition date.");
+  if(!/^\d{4}-\d{2}$/.test(a.start)) f.push("Choose the first month of depreciation.");
+  if(!(a.monate >= 1 && a.monate <= 1200)) f.push("The useful life must be between 1 and 1200 months.");
+  if(!(a.kosten > 0)) f.push("Enter the cost.");
+  if(a.restwert < 0 || a.restwert > a.kosten) f.push("The residual value must lie between 0 and the cost.");
+  if(a.vorher < 0 || a.vorher > a.kosten - a.restwert) f.push("The depreciation already booked cannot exceed cost less residual value.");
+  if(a.ab < a.start) f.push("The register cannot start before the first month of depreciation.");
+  return f;
+}
+const monateZwischen = (von, bis) => { const a = von.split("-").map(Number), b = bis.split("-").map(Number); return (b[0]-a[0])*12 + (b[1]-a[1]); };
+function anlageBuchungen(state, a){ return (state.buchungen||[]).filter(b=> b && b.plan && b.plan.id === a.id); }
+// what one depreciation booking charged: the credit on the contra (or asset) account
+function anlageBetragVon(a, b){ return r2(b.z.reduce((s, z)=> z[0] === (a.wb || a.konto) ? s + (z[2]||0) - (z[1]||0) : s, 0)); }
+function abgangMonat(a){ return a.abgang && a.abgang.datum ? a.abgang.datum.slice(0,7) : null; }
+/* the schedule: one row per month of the useful life
+   quelle: "vorher" (booked by hand before `ab`), "fest" (a booking in a closed year),
+   "gebucht" (a booking of this register in an open year), "offen" (still to book), "nach" (after the disposal) */
+function anlagePlan(state, a){
+  a = anlageNorm(a);
+  const n = a.monate, zu = new Set(state.abgeschlossen||[]);
+  const abIdx = Math.max(0, monateZwischen(a.start, a.ab));
+  const letzte = abgangMonat(a) ? Math.min(n-1, monateZwischen(a.start, abgangMonat(a))) : n-1;
+  const fest = {}, gebucht = {};
+  anlageBuchungen(state, a).filter(b=> b.plan.rolle === "abschreibung").forEach(b=>{
+    const J = parseInt(b.datum.slice(0,4), 10), von = (b.plan.ab || b.plan.nr) - 1, bis = b.plan.nr - 1, betrag = anlageBetragVon(a, b);
+    const anz = bis - von + 1; let rest = betrag;
+    for(let i = von; i <= bis; i++){ const teil = i === bis ? rest : r2(betrag/anz); rest = r2(rest - teil); (zu.has(J) ? fest : gebucht)[i] = {betrag:teil, id:b.id, datum:b.datum}; }
+  });
+  let festSumme = a.vorher; Object.keys(fest).forEach(i=> festSumme = r2(festSumme + fest[i].betrag));
+  // the open months over the whole remaining life carry the rest evenly; a disposal only cuts the rows off
+  const offen = []; for(let i = abIdx; i < n; i++) if(!fest[i]) offen.push(i);
+  const basis = r2(a.kosten - a.restwert - festSumme), m = offen.length;
+  const anteil = {}; offen.forEach((i, j)=> anteil[i] = r2(r2(basis*(j+1)/m) - r2(basis*j/m)));
+  const zeilen = [];
+  for(let i = 0; i < n; i++){
+    const monat = monatPlus(a.start, i);
+    let quelle, betrag;
+    if(i < abIdx) { quelle = "vorher"; betrag = fest[i] ? fest[i].betrag : null; }
+    else if(fest[i]) { quelle = "fest"; betrag = fest[i].betrag; }
+    else if(i > letzte) { quelle = "nach"; betrag = 0; }
+    else if(gebucht[i]) { quelle = "gebucht"; betrag = gebucht[i].betrag; }
+    else { quelle = "offen"; betrag = anteil[i] || 0; }
+    zeilen.push({nr:i+1, monat:monat, datum:monatsende(monat), betrag:betrag, soll:(i >= abIdx && i <= letzte) ? (fest[i] ? fest[i].betrag : (anteil[i]||0)) : 0, quelle:quelle, buchung:(fest[i]||gebucht[i]||{}).id || null});
+  }
+  // the planned charge per month that the open months carry (for the overview); the last booked state
+  return {anlage:a, zeilen:zeilen, abIdx:abIdx, letzte:letzte, basis:basis, monatlich: m ? r2(basis/m) : 0, ende:monatPlus(a.start, n-1), vorher:a.vorher};
+}
+/* booked and planned state of one asset at a date */
+function anlageStand(state, a, bis){
+  a = anlageNorm(a);
+  const plan = anlagePlan(state, a);
+  let gebucht = a.vorher; const bisMonat = bis.slice(0,7);
+  anlageBuchungen(state, a).filter(b=> b.plan.rolle === "abschreibung" && (b.plan.monat || b.datum.slice(0,7)) <= bisMonat).forEach(b=> gebucht = r2(gebucht + anlageBetragVon(a, b)));
+  let soll = a.vorher;
+  plan.zeilen.forEach(z=>{ if(z.quelle !== "vorher" && z.quelle !== "nach" && z.monat <= bisMonat) soll = r2(soll + z.soll); });
+  const abgegangen = !!(a.abgang && a.abgang.datum && a.abgang.datum <= bis);
+  const vorStart = bisMonat < a.ab && bisMonat < a.start;
+  const kosten = (abgegangen || bis < a.datum) ? 0 : a.kosten;
+  return {kosten:kosten, gebucht:abgegangen || bis < a.datum ? 0 : gebucht, buchwert: abgegangen || bis < a.datum ? 0 : r2(a.kosten - gebucht),
+          soll:soll, fehlt:r2(soll - gebucht), abgegangen:abgegangen, vorStart:vorStart, ende:plan.ende, monatlich:plan.monatlich};
+}
+/* the depreciation bookings of year J that are not booked yet; one asset or all */
+function anlagenFortfuehren(state, ix, J, nur){
+  const aus = {bookings:[], anlagen:[], gesperrt:(state.abgeschlossen||[]).indexOf(J) >= 0};
+  if(aus.gesperrt) return aus;
+  anlagen(state).forEach(roh=>{
+    if(nur && roh.id !== nur) return;
+    const a = anlageNorm(roh); if(!ix.km[a.konto] || !ix.km[a.aufwand]) return;
+    const plan = anlagePlan(state, a), n = a.monate;
+    const zeilen = plan.zeilen.filter(z=> z.quelle === "offen" && z.monat.slice(0,4) === String(J) && Math.abs(z.betrag) >= .005);
+    if(!zeilen.length) return;
+    const gegen = a.wb || a.konto, abg = a.abgang && a.abgang.datum ? a.abgang.datum : null;
+    const datumVon = z => { let d = z.datum; if(abg && d > abg) d = abg; if(d < a.datum) d = a.datum; return d; };
+    const buchung = (von, bis, betrag, datum, monat) => ({datum:datum, beleg:"", text:a.text+", depreciation ("+(von === bis ? bis : von+"–"+bis)+"/"+n+")",
+      z:[[a.aufwand, betrag, 0], [gegen, 0, betrag]], plan:{id:a.id, rolle:"abschreibung", ab:von, nr:bis, von:n, monat:monat}});
+    const neu = [];
+    if(a.rhythmus === "jahr"){
+      const betrag = r2(zeilen.reduce((s, z)=> s + z.betrag, 0)), letzte = zeilen[zeilen.length-1];
+      neu.push(buchung(zeilen[0].nr, letzte.nr, betrag, datumVon(letzte), letzte.monat));
+    }else zeilen.forEach(z=> neu.push(buchung(z.nr, z.nr, z.betrag, datumVon(z), z.monat)));
+    aus.bookings = aus.bookings.concat(neu);
+    aus.anlagen.push({id:a.id, text:a.text, monate:zeilen.length, von:zeilen[0].monat, bis:zeilen[zeilen.length-1].monat, betrag:r2(zeilen.reduce((s, z)=> s + z.betrag, 0)), buchungen:neu.length});
+  });
+  return aus;
+}
+/* after a change to an asset: its bookings in open years are rebuilt from the schedule, years up to `bisJahr` */
+function anlageNeuBuchen(state, ix, a, bisJahr, neueId){
+  const zu = new Set(state.abgeschlossen||[]);
+  state.buchungen = (state.buchungen||[]).filter(b=> !(b.plan && b.plan.id === a.id && b.plan.rolle === "abschreibung" && !zu.has(parseInt(b.datum.slice(0,4), 10))));
+  let n = 0;
+  for(let J = parseInt(anlageNorm(a).ab.slice(0,4), 10); J <= bisJahr; J++){
+    if(zu.has(J)) continue;
+    const f = anlagenFortfuehren(state, ix, J, a.id);
+    f.bookings.forEach(b=>{ state.buchungen.push(Object.assign({id:neueId()}, b)); n++; });
+  }
+  return n;
+}
+/* disposal: the depreciation up to the month of disposal, then the derecognition with the gain or loss.
+   Returns what to do: bookings of later months to remove, bookings of the disposal month to re-date to
+   the disposal, the missing depreciation to add, and the derecognition itself. */
+function anlageAbgang(state, ix, roh, o){
+  const a = anlageNorm(Object.assign({}, roh, {abgang:{datum:o.datum, erloes:o.erloes, konto:o.konto}}));
+  const fehler = [];
+  if(!istDatum(o.datum)) fehler.push("Enter a valid disposal date.");
+  else if(o.datum < a.datum) fehler.push("The disposal cannot lie before the acquisition.");
+  const erloes = r2(zahl(o.erloes)||0);
+  if(erloes < 0) fehler.push("The proceeds cannot be negative.");
+  if(erloes > 0 && !ix.km[o.konto]) fehler.push("Choose the account the proceeds go to.");
+  if(erloes > 0 && !ix.km[o.gewinn]) fehler.push("The account for a gain on disposal ("+o.gewinn+") is not in the chart of accounts.");
+  if(!ix.km[o.verlust]) fehler.push("The account for a loss on disposal ("+o.verlust+") is not in the chart of accounts.");
+  const J = parseInt(String(o.datum).slice(0,4), 10), zu = new Set(state.abgeschlossen||[]);
+  if(zu.has(J)) fehler.push("The year of the disposal is closed.");
+  if(fehler.length) return {ok:false, fehler:fehler};
+  const monat = o.datum.slice(0,7);
+  // existing depreciation bookings of open years: after the disposal month they go, in the disposal month they move to the disposal date
+  const entfernen = [], umdatieren = [];
+  anlageBuchungen(state, a).filter(b=> b.plan.rolle === "abschreibung" && !zu.has(parseInt(b.datum.slice(0,4), 10))).forEach(b=>{
+    const m = b.plan.monat || b.datum.slice(0,7);
+    if(m > monat) entfernen.push(b.id);
+    else if(b.datum > o.datum) umdatieren.push(b.id);
+  });
+  const weg = new Set(entfernen);
+  const probe = Object.assign({}, state, {anlagen:anlagen(state).map(x=> x.id === a.id ? a : x),
+    buchungen:(state.buchungen||[]).filter(b=> !weg.has(b.id)).map(b=> umdatieren.indexOf(b.id) >= 0 ? Object.assign({}, b, {datum:o.datum}) : b)});
+  const f = anlagenFortfuehren(probe, ix, J, a.id);               // the months up to the disposal that are not booked yet
+  const neu = f.bookings.map(b=> Object.assign({}, b, {datum: b.datum > o.datum ? o.datum : b.datum}));
+  const nachher = Object.assign({}, probe, {buchungen:probe.buchungen.concat(neu)});
+  const gebucht = r2(a.vorher + anlageBuchungen(nachher, a).filter(b=> b.plan.rolle === "abschreibung" && b.datum <= o.datum).reduce((s2, b)=> s2 + anlageBetragVon(a, b), 0));
+  const buchwert = r2(a.kosten - gebucht), ergebnis = r2(erloes - buchwert);
+  const z = [];
+  if(erloes > 0) z.push([o.konto, erloes, 0]);
+  if(a.wb){ if(gebucht > 0.005) z.push([a.wb, gebucht, 0]); z.push([a.konto, 0, a.kosten]); }
+  else if(buchwert > 0.005) z.push([a.konto, 0, buchwert]);
+  if(ergebnis > 0.005) z.push([o.gewinn, 0, ergebnis]);
+  else if(ergebnis < -0.005) z.push([o.verlust, -ergebnis, 0]);
+  const abgang = {datum:o.datum, beleg:"", text:a.text+", disposal"+(erloes > 0 ? " for "+erloes.toFixed(2) : ""), z:z, plan:{id:a.id, rolle:"abgang"}};
+  return {ok:true, fehler:[], entfernen:entfernen, umdatieren:umdatieren, bookings:neu.concat([abgang]), abschreibung:neu.length,
+          gebucht:gebucht, buchwert:buchwert, erloes:erloes, ergebnis:ergebnis, anlage:a};
+}
+/* apply a disposal to the state: the bookings are removed, re-dated and added; the asset is marked */
+function anlageAbgangBuchen(state, roh, ab, neueId){
+  const weg = new Set(ab.entfernen), um = new Set(ab.umdatieren);
+  state.buchungen = (state.buchungen||[]).filter(b=> !weg.has(b.id));
+  state.buchungen.forEach(b=>{ if(um.has(b.id)) b.datum = ab.anlage.abgang.datum; });
+  ab.bookings.forEach(b=> state.buchungen.push(Object.assign({id:neueId()}, b)));
+  const a = (state.anlagen||[]).find(x=> x.id === roh.id);
+  if(a){ a.status = "abgegangen"; a.abgang = Object.assign({}, ab.anlage.abgang); }
+}
+/* the register as a whole at a date: totals, per-asset state */
+function anlagenUebersicht(state, ix, bis){
+  const liste = anlagen(state).map(roh=>{ const a = anlageNorm(roh); const s = anlageStand(state, a, bis); return Object.assign({anlage:a, plan:anlagePlan(state, a)}, s); });
+  const t = {kosten:0, gebucht:0, buchwert:0, fehlt:0};
+  liste.forEach(x=>{ t.kosten = r2(t.kosten + x.kosten); t.gebucht = r2(t.gebucht + x.gebucht); t.buchwert = r2(t.buchwert + x.buchwert); t.fehlt = r2(t.fehlt + (x.abgegangen ? 0 : x.fehlt)); });
+  return {bis:bis, anlagen:liste, total:t};
+}
+/* planned net book value of every asset at each month end of year J, and the charge of the year */
+function anlagenJahresreihe(state, ix, J){
+  const reihe = [];
+  for(let m = 1; m <= 12; m++){
+    const bis = E.letzterTag(J, m); let buchwert = 0, aufwand = 0;
+    anlagen(state).forEach(roh=>{
+      const a = anlageNorm(roh), p = anlagePlan(state, a), monat = bis.slice(0,7);
+      if(a.datum > bis || (a.abgang && a.abgang.datum <= bis)) return;
+      let soll = a.vorher; p.zeilen.forEach(z=>{ if(z.quelle !== "vorher" && z.quelle !== "nach" && z.monat <= monat) soll = r2(soll + z.soll); if(z.monat === monat && z.quelle !== "vorher" && z.quelle !== "nach") aufwand = r2(aufwand + z.soll); });
+      buchwert = r2(buchwert + a.kosten - soll);
+    });
+    reihe.push({m:m, kurz:E.MONATE[m-1].slice(0,3), name:E.MONATE[m-1], buchwert:buchwert, aufwand:aufwand});
+  }
+  return reihe;
+}
+/* per-year view of one schedule: opening value, charge, closing value */
+function anlageJahre(state, a){
+  const p = anlagePlan(state, a), jahre = {}, order = [];
+  let lauf = r2(p.anlage.kosten - p.anlage.vorher);
+  if(p.anlage.vorher > 0.005){ const j0 = p.anlage.ab.slice(0,4); jahre["vor"] = {jahr:"before "+p.anlage.ab, anfang:p.anlage.kosten, aufwand:p.anlage.vorher, ende:lauf}; order.push("vor"); }
+  p.zeilen.forEach(z=>{
+    if(z.quelle === "vorher" || z.quelle === "nach") return;
+    const j = z.monat.slice(0,4);
+    if(!jahre[j]){ jahre[j] = {jahr:j, anfang:lauf, aufwand:0, ende:lauf, offen:0, gebucht:0}; order.push(j); }
+    const b = z.soll; jahre[j].aufwand = r2(jahre[j].aufwand + b); lauf = r2(lauf - b); jahre[j].ende = lauf;
+    if(z.quelle === "offen") jahre[j].offen = r2(jahre[j].offen + b); else jahre[j].gebucht = r2(jahre[j].gebucht + b);
+  });
+  return order.map(k=> jahre[k]);
+}
+/* the accounts a new asset defaults to: the contra account next to the asset account, the
+   depreciation account sharing a word with it, else the first account of the depreciation group */
+function anlageVorschlag(state, ix, konto){
+  const k = ix.km[konto]; if(!k) return {wb:"", aufwand:""};
+  const alle = E.konten(state);
+  const wb = alle.filter(x=> x.grp === k.grp && x.nr !== konto && istKontraName(x.name) && parseFloat(x.nr) > parseFloat(konto)).sort((x, y)=> parseFloat(x.nr) - parseFloat(y.nr))[0];
+  const stop = /^(abschreibung(en)?|abschr|wb|wertberichtigung(en)?|auf|und|inkl|etc|bis|über|ueber|jahre?|analog|restwert|aktivierung|chf|der|die|das|des|von|mit|ohne|netto|brutto|and|the|of)$/;
+  const worte = s => String(s||"").toLowerCase().split(/[^a-zäöüéèàç]+/).filter(t=> t.length >= 3 && !stop.test(t));
+  const kw = worte(k.name);
+  const er = alle.filter(x=> E.istER(ix.gm[x.grp]) && /abschreib|depreciation|amortis/i.test(x.name));
+  let auf = er.find(x=> worte(x.name).some(t=> kw.some(u=> t === u || (t.length >= 4 && u.startsWith(t)) || (u.length >= 4 && t.startsWith(u)))));
+  if(!auf) auf = er[0] || alle.find(x=>{ const g = ix.gm[x.grp]; return g && E.istER(g) && /depreciation|abschreib|amortis/i.test(g.t); });
+  return {wb: wb ? wb.nr : "", aufwand: auf ? auf.nr : ""};
+}
+/* the groups that hold depreciable assets, and whether a booking line asks for the register */
+function istAnlageGruppe(g){ return !!g && g.s === "A" && !!g.anlage; }
+function anlageKonto(ix, nr){
+  const k = ix.km[nr]; if(!k) return false;
+  const g = ix.gm[k.grp]; if(!istAnlageGruppe(g)) return false;
+  return !istKontraName(k.name);
+}
+
+/* ---- Sign convention by balance check ------------------------------- */
+function besterModus(analyse, spalte, ix, zuordnung){
+  const heuristik = erkenneVorzeichen(analyse, spalte, ix);
+  const reihe = [heuristik, "darstellung", "soll", "betrag", "haben"].filter((v,i,a)=>a.indexOf(v)===i);
+  for(const m of reihe){
+    const r = saldenAusImport(analyse, spalte, m, ix, zuordnung);
+    if(Object.keys(r.salden).length && Math.abs(pruefeSalden(r.salden, ix).differenz) < .05) return m;
+  }
+  return heuristik;
+}
+
+
+/* ---- Years side by side --------------------------------------------- */
+// Imported closings plus the current year, one column each.
+function jahresvergleich(kontext){
+  const st = kontext.state, ix = kontext.ix;
+  const imFile = new Set(Object.keys(E.jahreMitBuchungen(st)).map(Number).concat([st.jahr]));
+  const q = [];
+  (st.vergleichsjahre||[]).map(v=>v.jahr).filter(j=>!imFile.has(j)).concat(Array.from(imFile)).sort((a,b)=>a-b).forEach(j=>{
+    if(imFile.has(j)) q.push({state:st, ix:ix, von:j+"-01-01", bis:j+"-12-31", jahr:j, label:String(j), aktuell:j===st.jahr});
+    else q.push(Object.assign(importQuelle(kontext, j), {jahr:j, label:String(j), importiert:true}));
+  });
+  const fb = q.map(x=> E.flachBilanz(E.bilanz(x.state, x.ix, x.von, x.bis)));
+  const fe = q.map(x=> E.flachErfolg(E.erfolg(x.state, x.ix, x.von, x.bis)));
+  const r = strukturZeilen(st, ix, fb, fe, st.jahr+"-01-01", st.jahr+"-12-31");
+  return {spalten:q.map(x=>({jahr:x.jahr, label:x.label, importiert:!!x.importiert})), bilanz:r.bilanz, erfolg:r.erfolg};
+}
+function strukturZeilen(state, ix, fb, fe, von, bis){
+  const zB = new Set(), zE = new Set();
+  fb.forEach(m=> Object.keys(m).forEach(k=>{ if(k.indexOf("k:")===0 && Math.abs(m[k])>=.005) zB.add(k.slice(2)); }));
+  fe.forEach(m=> Object.keys(m).forEach(k=>{ if(k.indexOf("k:")===0 && Math.abs(m[k])>=.005) zE.add(k.slice(2)); }));
+  const bj = E.bilanz(state, ix, von, bis, zB), ej = E.erfolg(state, ix, von, bis, null, zE);
+  const reihe = (maps, key) => maps.map(m=> m[key] === undefined ? 0 : m[key]);
+  const bil = [];
+  [bj.aktiven, bj.passiven].forEach((teil, ti)=>{
+    bil.push({typ:"seite", text:teil.titel});
+    teil.sektionen.forEach(s=>{
+      if(!s.gruppen.length && !s.mitErgebnis) return;
+      bil.push({typ:"bereich", text:s.titel});
+      s.gruppen.forEach(g=>{
+        const mehr = g.konten.length > 1 || g.st === "immer";
+        if(mehr) bil.push({typ:"gruppe", text:g.titel, werte:reihe(fb,"grp:"+g.code)});
+        g.konten.forEach(k=> bil.push({typ:"konto", nr:k.nr, text:k.name, werte:reihe(fb,"k:"+k.nr), einzug:mehr}));
+      });
+      if(s.mitErgebnis) bil.push({typ:"konto", nr:"", text:(state.titel&&state.titel.ergebnis)||"Result for the period", werte:reihe(fb,"ergebnis")});
+      bil.push({typ:"summe", text:"Total "+s.titel.toLowerCase(), werte:reihe(fb,"sek:"+s.code)});
+    });
+    bil.push({typ:"total", text:"Total "+teil.titel.toLowerCase(), werte:reihe(fb, ti===0 ? "aktiven" : "passiven")});
+  });
+  const erf = [];
+  ej.zeilen.forEach(x=>{
+    if(x.typ === "gruppe"){
+      if(!x.konten.length) return;
+      erf.push({typ:"gruppe", code:x.code, text:x.titel, werte:reihe(fe,"grp:"+x.code)});
+      x.konten.forEach(k=> erf.push({typ:"konto", nr:k.nr, text:k.name, werte:reihe(fe,"k:"+k.nr), einzug:true}));
+    }else erf.push({typ: x.typ === "total" ? "total" : "summe", text:x.titel, werte:reihe(fe,x.code)});
+  });
+  return {bilanz:bil, erfolg:erf};
+}
+
+
+/* ---- All twelve month ends of a year in one pass ---------------------
+   Same figures as fsWerte(state, ix, J-01-01, month end), but the year's
+   bookings are read once instead of twelve times. */
+function fsMonatsWerte(state, ix, J){
+  const buch = E.imJahr(state, J).filter(b=> b && E.istDatum(b.datum)).slice().sort((a,b)=> a.datum < b.datum ? -1 : (a.datum > b.datum ? 1 : 0));
+  const bs = {}, er = {}, aus = [];
+  const konten = E.konten(state).filter(k=> ix.gm[k.grp]);
+  let i = 0;
+  for(let m = 1; m <= 12; m++){
+    const bis = E.letzterTag(J, m);
+    for(; i < buch.length && buch[i].datum <= bis; i++){
+      const b = buch[i];
+      b.z.forEach(z=>{
+        const d = (z[1]||0) - (z[2]||0);
+        bs[z[0]] = r2((bs[z[0]]||0) + d);
+        if(!b.eb) er[z[0]] = r2((er[z[0]]||0) + d);
+      });
+    }
+    const w = {};
+    konten.forEach(k=>{
+      const saldo = ix.gm[k.grp].s === "E" ? (er[k.nr]||0) : (bs[k.nr]||0);
+      if(Math.abs(saldo) < .005) return;
+      w[k.nr] = parseFloat(k.nr) < 2000 ? r2(saldo) : r2(-saldo);
+    });
+    aus.push(w);
+  }
+  return aus;
+}
+
+Object.assign(E, {zahl:zahl, nachkomma:nachkomma, istDatum:istDatum, reparDatum:reparDatum,
+  monatPlus:monatPlus, datumPlusMonate:datumPlusMonate, monatsende:monatsende,
+  EINSTELLUNGEN:EINSTELLUNGEN, pruefeDatei:pruefeDatei, naechsterBeleg:naechsterBeleg,
+  verteilung:verteilung, plaene:plaene, spreadsUmstellen:spreadsUmstellen, spreadsFortfuehren:spreadsFortfuehren,
+  leseTabelleText:leseTabelleText, leseXlsx:leseXlsx, analysiereSalden:analysiereSalden,
+  erkenneVorzeichen:erkenneVorzeichen, saldenAusImport:saldenAusImport, pruefeSalden:pruefeSalden, natur:natur,
+  mitStruktur:mitStruktur, synthAusSalden:synthAusSalden, importQuelle:importQuelle,
+  dateiQuelle:dateiQuelle, vorjahrQuelle:vorjahrQuelle, flachVon:flachVon, zeigenAus:zeigenAus,
+  kennzahlen:kennzahlen, bericht:bericht, hatJahr:hatJahr,
+  datumAusEingabe:datumAusEingabe, betragAusEingabe:betragAusEingabe, eroeffnungAusSalden:eroeffnungAusSalden,
+  fsWerte:fsWerte, fsExport:fsExport, monatsbericht:monatsbericht, besterModus:besterModus, jahresvergleich:jahresvergleich, fsMonatsWerte:fsMonatsWerte,
+  abschlussPruefung:abschlussPruefung, abschlussStruktur:abschlussStruktur, cfKlassen:cfKlassen, anlageKandidaten:anlageKandidaten, BUCKET_KLASSE:BUCKET_KLASSE,
+  anlagen:anlagen, anlageNorm:anlageNorm, anlagePruefen:anlagePruefen, anlagePlan:anlagePlan, anlageStand:anlageStand, anlagenFortfuehren:anlagenFortfuehren,
+  anlageNeuBuchen:anlageNeuBuchen, anlageAbgang:anlageAbgang, anlageAbgangBuchen:anlageAbgangBuchen, anlagenUebersicht:anlagenUebersicht, anlagenJahresreihe:anlagenJahresreihe, anlageJahre:anlageJahre,
+  anlageVorschlag:anlageVorschlag, istAnlageGruppe:istAnlageGruppe, anlageKonto:anlageKonto, monateZwischen:monateZwischen});
+})(ENGINE);
+</script>

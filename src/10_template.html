@@ -1,0 +1,728 @@
+<script id="vorlage">
+/* Template for new files: chart of accounts and statement structure.
+   No figures live here; the accounting data sits in its own file. */
+var VORLAGE = {
+"mandant": "Your name",
+"waehrung": "CHF",
+"kurse": {
+"USD": 0.8,
+"EUR": 0.94
+},
+"sektionen": {
+"UV": "Current assets",
+"AV": "Non-current assets",
+"KFK": "Short-term liabilities",
+"LFK": "Long-term liabilities",
+"EK": "Equity"
+},
+"titel": {
+"aktiven": "Assets",
+"passiven": "Liabilities and equity",
+"ergebnis": "Result for the period"
+},
+"buckets": [
+{
+"b": "fonds",
+"t": "Cash and cash equivalents",
+"teil": "—"
+},
+{
+"b": "rst",
+"t": "Change in provisions",
+"teil": "betrieb"
+},
+{
+"b": "op_fll",
+"t": "Change in trade receivables",
+"teil": "betrieb"
+},
+{
+"b": "op_vor",
+"t": "Change in inventories",
+"teil": "betrieb"
+},
+{
+"b": "op_uea",
+"t": "Change in other receivables and prepaid expenses",
+"teil": "betrieb"
+},
+{
+"b": "op_vll",
+"t": "Change in trade payables",
+"teil": "betrieb"
+},
+{
+"b": "op_uep",
+"t": "Change in other short-term liabilities and accruals",
+"teil": "betrieb"
+},
+{
+"b": "inv",
+"t": "Investments and divestments",
+"teil": "investition"
+},
+{
+"b": "fin",
+"t": "Change in loans and interest-bearing liabilities",
+"teil": "finanzierung"
+},
+{
+"b": "ek",
+"t": "Capital contributions and withdrawals",
+"teil": "finanzierung"
+}
+],
+"gruppen": [
+{
+"c": "A1",
+"t": "Cash and cash equivalents",
+"s": "A",
+"sek": "UV",
+"cf": "fonds",
+"st": "auto",
+"r": [
+[
+1000,
+1060
+]
+]
+},
+{
+"c": "A2",
+"t": "Short-term assets with a market price",
+"s": "A",
+"sek": "UV",
+"cf": "inv",
+"st": "auto",
+"r": [
+[
+1060,
+1080
+]
+]
+},
+{
+"c": "A3",
+"t": "Open items and items in clarification",
+"s": "A",
+"sek": "UV",
+"cf": "op_uea",
+"st": "auto",
+"r": [
+[
+1080,
+1100
+]
+]
+},
+{
+"c": "A4",
+"t": "Trade receivables",
+"s": "A",
+"sek": "UV",
+"cf": "op_fll",
+"st": "auto",
+"r": [
+[
+1100,
+1140
+]
+]
+},
+{
+"c": "A5",
+"t": "Other short-term receivables",
+"s": "A",
+"sek": "UV",
+"cf": "op_uea",
+"st": "auto",
+"r": [
+[
+1140,
+1200
+]
+]
+},
+{
+"c": "A6",
+"t": "Inventories and unbilled services",
+"s": "A",
+"sek": "UV",
+"cf": "op_vor",
+"st": "auto",
+"r": [
+[
+1200,
+1300
+]
+]
+},
+{
+"c": "A7",
+"t": "Prepaid expenses and accrued income",
+"s": "A",
+"sek": "UV",
+"cf": "op_uea",
+"st": "auto",
+"r": [
+[
+1300,
+1400
+]
+]
+},
+{
+"c": "A8",
+"t": "Liquid financial assets (long-term)",
+"s": "A",
+"sek": "AV",
+"cf": "inv",
+"st": "auto",
+"r": [
+[
+1400,
+1428
+]
+]
+},
+{
+"c": "A9",
+"t": "Non-liquid financial assets",
+"s": "A",
+"sek": "AV",
+"cf": "inv",
+"st": "auto",
+"r": [
+[
+1428,
+1480
+]
+]
+},
+{
+"c": "A10",
+"t": "Participations",
+"s": "A",
+"sek": "AV",
+"cf": "inv",
+"st": "auto",
+"r": [
+[
+1480,
+1490
+]
+]
+},
+{
+"c": "A11",
+"t": "Restricted financial assets",
+"s": "A",
+"sek": "AV",
+"cf": "inv",
+"st": "auto",
+"r": [
+[
+1490,
+1500
+]
+]
+},
+{
+"c": "A12",
+"t": "Movable property",
+"s": "A",
+"sek": "AV",
+"cf": "inv",
+"st": "auto",
+"r": [
+[
+1500,
+1600
+]
+]
+},
+{
+"c": "A13",
+"t": "Immovable property",
+"s": "A",
+"sek": "AV",
+"cf": "inv",
+"st": "auto",
+"r": [
+[
+1600,
+1700
+]
+]
+},
+{
+"c": "A14",
+"t": "Intangible assets",
+"s": "A",
+"sek": "AV",
+"cf": "inv",
+"st": "auto",
+"r": [
+[
+1700,
+2000
+]
+]
+},
+{
+"c": "L1",
+"t": "Trade payables",
+"s": "P",
+"sek": "KFK",
+"cf": "op_vll",
+"st": "auto",
+"r": [
+[
+2000,
+2100
+]
+]
+},
+{
+"c": "L2",
+"t": "Interest-bearing short-term liabilities",
+"s": "P",
+"sek": "KFK",
+"cf": "fin",
+"st": "auto",
+"r": [
+[
+2100,
+2200
+]
+]
+},
+{
+"c": "L3",
+"t": "Other short-term liabilities",
+"s": "P",
+"sek": "KFK",
+"cf": "op_uep",
+"st": "auto",
+"r": [
+[
+2200,
+2300
+]
+]
+},
+{
+"c": "L4",
+"t": "Accrued expenses and deferred income",
+"s": "P",
+"sek": "KFK",
+"cf": "op_uep",
+"st": "auto",
+"r": [
+[
+2300,
+2400
+]
+]
+},
+{
+"c": "L5",
+"t": "Interest-bearing long-term liabilities",
+"s": "P",
+"sek": "LFK",
+"cf": "fin",
+"st": "auto",
+"r": [
+[
+2400,
+2500
+]
+]
+},
+{
+"c": "L6",
+"t": "Other long-term liabilities",
+"s": "P",
+"sek": "LFK",
+"cf": "fin",
+"st": "auto",
+"r": [
+[
+2500,
+2600
+]
+]
+},
+{
+"c": "L7",
+"t": "Provisions",
+"s": "P",
+"sek": "LFK",
+"cf": "rst",
+"st": "auto",
+"r": [
+[
+2600,
+2800
+]
+]
+},
+{
+"c": "Q1",
+"t": "Equity at the beginning of the year",
+"s": "P",
+"sek": "EK",
+"cf": "ek",
+"st": "auto",
+"r": [
+[
+2800,
+2820
+]
+]
+},
+{
+"c": "Q2",
+"t": "Capital contributions and withdrawals",
+"s": "P",
+"sek": "EK",
+"cf": "ek",
+"st": "auto",
+"r": [
+[
+2820,
+3000
+]
+]
+},
+{
+"c": "I1",
+"t": "Income",
+"s": "E",
+"vz": -1,
+"zw": "",
+"r": [
+[
+3000,
+3500
+]
+]
+},
+{
+"c": "I2",
+"t": "Income from restricted assets",
+"s": "E",
+"vz": -1,
+"zw": "Total income",
+"nc": true,
+"r": [
+[
+3500,
+4000
+]
+]
+},
+{
+"c": "I3",
+"t": "Food, household and daily living",
+"s": "E",
+"vz": 1,
+"zw": "Gross result I",
+"r": [
+[
+4000,
+5000
+]
+]
+},
+{
+"c": "I4",
+"t": "Health",
+"s": "E",
+"vz": 1,
+"zw": "Gross result",
+"r": [
+[
+5000,
+6000
+]
+]
+},
+{
+"c": "I5",
+"t": "Rent and building costs",
+"s": "E",
+"vz": 1,
+"zw": "",
+"r": [
+[
+6000,
+6200
+]
+]
+},
+{
+"c": "I6",
+"t": "Vehicle costs",
+"s": "E",
+"vz": 1,
+"zw": "",
+"r": [
+[
+6200,
+6300
+]
+]
+},
+{
+"c": "I7",
+"t": "Insurance, duties, fees and permits",
+"s": "E",
+"vz": 1,
+"zw": "",
+"r": [
+[
+6300,
+6500
+]
+]
+},
+{
+"c": "I8",
+"t": "Administration and IT",
+"s": "E",
+"vz": 1,
+"zw": "",
+"r": [
+[
+6500,
+6600
+]
+]
+},
+{
+"c": "I9",
+"t": "Hobbies and leisure",
+"s": "E",
+"vz": 1,
+"zw": "",
+"r": [
+[
+6600,
+6700
+]
+]
+},
+{
+"c": "I10",
+"t": "Other expenses",
+"s": "E",
+"vz": 1,
+"zw": "EBITDA",
+"zwBlock": "Total other operating expenses",
+"r": [
+[
+6700,
+6800
+]
+]
+},
+{
+"c": "I11",
+"t": "Depreciation and amortisation",
+"s": "E",
+"vz": 1,
+"zw": "EBIT",
+"nc": true,
+"r": [
+[
+6800,
+6900
+]
+]
+},
+{
+"c": "I12",
+"t": "Financial income and expenses",
+"s": "E",
+"vz": -1,
+"zw": "",
+"r": [
+[
+6900,
+7000
+]
+]
+},
+{
+"c": "I13",
+"t": "Extraordinary and prior-period items",
+"s": "E",
+"vz": -1,
+"zw": "Result before taxes (EBT)",
+"r": [
+[
+7000,
+8900
+]
+]
+},
+{
+"c": "I14",
+"t": "Direct taxes",
+"s": "E",
+"vz": 1,
+"zw": "",
+"r": [
+[
+8900,
+9500
+]
+]
+}
+],
+"konten": [
+["1000","Cash CHF","A1",null,null],
+["1001","Cash EUR","A1",null,"EUR"],
+["1002","Cash USD","A1",null,"USD"],
+["1020","Bank account CHF","A1",null,null],
+["1020.1","Bank account EUR","A1",null,"EUR"],
+["1020.2","Bank account USD","A1",null,"USD"],
+["1021","Savings account","A1",null,null],
+["1025","Second bank account","A1",null,null],
+["1030","Mobile payment app","A1",null,null],
+["1035","Broker cash account CHF","A1",null,null],
+["1035.2","Broker cash account USD","A1",null,"USD"],
+["1040","Vouchers and gift cards","A1",null,null],
+["1060","Securities (short-term)","A2",null,null],
+["1070","Cryptocurrencies (short-term)","A2",null,null],
+["1090","Transfer account","A3",null,null],
+["1099","Items to clarify","A3",null,null],
+["1100","Trade receivables","A4",null,null],
+["1140","Loans granted","A5",null,null],
+["1150","Expense claims (employer)","A5",null,null],
+["1176","Withholding tax receivable","A5",null,null],
+["1180","Current account tax office","A5",null,null],
+["1190","Other short-term receivables","A5",null,null],
+["1191","Cashback credit","A5",null,null],
+["1300","Prepaid expenses (year end)","A7",null,null],
+["1301","Accrued income","A7",null,null],
+["1303","Prepaid expenses within the year (period adjustments)","A7",null,null],
+["1305","Prepaid expenses within the year (spread over months)","A7",null,null],
+["1400","ETF portfolio (net deposits)","A8",null,null],
+["1400.1","ETF portfolio, unrealised gains and losses","A8",null,null],
+["1405","Cryptocurrencies (long-term)","A8",null,null],
+["1428","Rental deposit","A9",null,null],
+["1480","Participations","A10",null,null],
+["1489","Value adjustments on participations","A10",null,null],
+["1490","Pillar 3a (net deposits)","A11",null,null],
+["1490.1","Pillar 3a, unrealised gains and losses","A11",null,null],
+["1491","Pension fund","A11",null,null],
+["1500","IT equipment","A12",null,null],
+["1509","Accumulated depreciation IT equipment","A12",null,null],
+["1510","Furniture and fittings","A12",null,null],
+["1520","Vehicle","A12",null,null],
+["1521","Accumulated depreciation vehicle","A12",null,null],
+["1600","Real estate","A13",null,null],
+["2000","Trade payables","L1",null,null],
+["2100","Bank liabilities","L2",null,null],
+["2110","Credit card","L2","op_uep",null],
+["2111","Second credit card","L2","op_uep",null],
+["2150","Leasing (short-term portion)","L2",null,null],
+["2206","Withholding tax payable","L3",null,null],
+["2210","Direct taxes","L3",null,null],
+["2250","Current account private persons","L3",null,null],
+["2270","Social insurance and pension schemes","L3",null,null],
+["2300","Accrued expenses and deferred income (year end)","L4",null,null],
+["2303","Accrued expenses within the year (period adjustments)","L4",null,null],
+["2305","Deferred income within the year (spread over months)","L4",null,null],
+["2330","Short-term provisions","L4",null,null],
+["2400","Long-term bank loans","L5",null,null],
+["2410","Leasing (long-term portion)","L5",null,null],
+["2451","Mortgages","L5",null,null],
+["2500","Other long-term liabilities (non-interest-bearing)","L6",null,null],
+["2550","Education loan","L6",null,null],
+["2600","Provisions","L7",null,null],
+["2800","Equity at the beginning of the year","Q1",null,null],
+["2820","Capital contributions and withdrawals","Q2",null,null],
+["2850","Private","Q2",null,null],
+["3000","Net salary","I1",null,null],
+["3001","Side income","I1",null,null],
+["3100","Bonus","I1",null,null],
+["3200","Other income","I1",null,null],
+["3300","Cashback and rewards","I1",null,null],
+["3360","Gifts received","I1",null,null],
+["3500","Increase pension fund","I2",null,null],
+["3600","Increase pillar 3a","I2",null,null],
+["4000","Groceries","I3",null,null],
+["4001","Restaurants and take-away","I3",null,null],
+["4100","Household items","I3",null,null],
+["4200","Personal care","I3",null,null],
+["4300","Clothing and shoes","I3",null,null],
+["4400","Hairdresser","I3",null,null],
+["5000","Medication","I4",null,null],
+["5200","Doctor","I4",null,null],
+["5301","Dentist","I4",null,null],
+["5700","Health insurance","I4",null,null],
+["5810","Education and training","I4",null,null],
+["6000","Rent and service charges","I5",null,null],
+["6001","Service charges (annual statement difference)","I5",null,null],
+["6031","Electricity","I5",null,null],
+["6040","Other housing costs","I5",null,null],
+["6200","Vehicle repairs and service","I6",null,null],
+["6210","Fuel","I6",null,null],
+["6220","Vehicle insurance","I6",null,null],
+["6230","Parking","I6",null,null],
+["6240","Other vehicle costs","I6",null,null],
+["6300","Property insurance","I7",null,null],
+["6350","Duties and fees","I7",null,null],
+["6500","Office supplies","I8",null,null],
+["6510","Phone and internet","I8",null,null],
+["6513","Postage","I8",null,null],
+["6520","Memberships and donations","I8",null,null],
+["6570","Software and licences","I8",null,null],
+["6580","Hardware","I8",null,null],
+["6620","Gym","I9",null,null],
+["6650","Leisure activities","I9",null,null],
+["6651","Streaming and music","I9",null,null],
+["6660","Holidays","I9",null,null],
+["6700","Gifts","I10",null,null],
+["6710","Travel (excluding holidays)","I10",null,null],
+["6785","Moving and furniture","I10",null,null],
+["6790","Other expenses","I10",null,null],
+["6800","Depreciation vehicle","I11",null,null],
+["6801","Depreciation IT equipment","I11",null,null],
+["6810","Loss on disposal of fixed assets","I11",null,null],
+["6815","Gain on disposal of fixed assets","I11",null,null],
+["6900","Bank interest expense","I12",null,null],
+["6901","Leasing interest","I12",null,null],
+["6940","Bank charges","I12",null,null],
+["6941","Trading and transaction fees","I12",null,null],
+["6942","Realised losses on securities","I12",null,null],
+["6945","Unrealised losses on securities","I12","nc",null],
+["6946","Unrealised losses on cryptocurrencies","I12","nc",null],
+["6949","Currency losses","I12",null,null],
+["6950","Interest income","I12",null,null],
+["6951","Dividends","I12",null,null],
+["6952","Realised gains on securities","I12",null,null],
+["6955","Unrealised gains on securities","I12","nc",null],
+["6956","Unrealised gains on cryptocurrencies","I12","nc",null],
+["6999","Currency gains","I12",null,null],
+["8500","Extraordinary or prior-period expenses","I13",null,null],
+["8510","Extraordinary or prior-period income","I13",null,null],
+["8900","Direct taxes","I14",null,null]
+],
+"einstellungen": {
+"ara": "1300",
+"araJahr": "1305",
+"pra": "2300",
+"praJahr": "2305",
+"gewinnvortrag": "2800",
+"kursgewinn": "6999",
+"kursverlust": "6949",
+"ersteller": ""
+}
+};
+var BEISPIEL_BUCHUNGEN = [];
+if(typeof module !== "undefined"){ module.exports = {VORLAGE:VORLAGE, BEISPIEL_BUCHUNGEN:BEISPIEL_BUCHUNGEN}; }
+</script>

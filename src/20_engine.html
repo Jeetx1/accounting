@@ -1,0 +1,383 @@
+<script id="engine">
+/* =========================================================================
+   ENGINE — reine Rechenlogik, kein DOM.
+   Vorzeichen durchgehend: saldo = Soll − Haben.
+   Der ganze Aufbau der Abschlüsse (Gruppen, Zwischentotale, Geldfluss-
+   Zuordnung) kommt aus der Datei, nicht aus dem Code.
+   ========================================================================= */
+var ENGINE = (function(){
+
+const SEK_AKTIV  = ["UV","AV"];
+const SEK_PASSIV = ["KFK","LFK","EK"];
+const MONATE = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const r2 = x => Math.round((x + Number.EPSILON) * 100) / 100;
+
+/* ---- Index über Konten und Gruppen ---------------------------------- */
+function konten(state){
+  return (state.konten||[]).map(k => Array.isArray(k)
+    ? {nr:k[0], name:k[1], grp:k[2], cf:k[3]||null, wkz:k[4]||null} : k);
+}
+function ctx(state){
+  const km = {}; konten(state).forEach(k => km[k.nr] = k);
+  const gm = {}; (state.gruppen||[]).forEach(g => gm[g.c] = g);
+  const bm = {}; (state.buckets||[]).forEach(b => bm[b.b] = b);
+  const ix = {km:km, gm:gm, bm:bm};
+  // Every structural change goes through ctx, so the cached opening balances are dropped here.
+  if(state && typeof state === "object") CACHE.delete(state);
+  return ix;
+}
+/* ---- Years ------------------------------------------------------------
+   One file can hold several financial years. Each date belongs to its year.
+   The opening of a year is never booked: it is the closing of the prior year
+   in this file (or an imported closing), with all equity accounts and the
+   result rolled into the equity-at-beginning account. */
+const CACHE = new WeakMap();
+function cacheVon(state){
+  const sig = (state.buchungen ? state.buchungen.length : 0)+"|"+(state.vergleichsjahre||[]).length;
+  let c = CACHE.get(state);
+  if(!c || c.sig !== sig || c.b !== state.buchungen){ c = {sig:sig, b:state.buchungen, eb:{}, ix:null, jahre:null}; CACHE.set(state, c); }
+  return c;
+}
+const jahrVon = d => parseInt(String(d).slice(0,4), 10);
+function jahreMitBuchungen(state){
+  const c = cacheVon(state);
+  if(!c.jahre){ const m = {}; (state.buchungen||[]).forEach(b=>{ if(b && b.datum) m[jahrVon(b.datum)] = true; }); c.jahre = m; }
+  return c.jahre;
+}
+function eroeffnung(state, J){
+  if(!state || state.synthetisch) return null;
+  const c = cacheVon(state);
+  if(c.eb[J] !== undefined) return c.eb[J];
+  c.eb[J] = null;                                   // guards against recursion
+  let eb = null;
+  if(!(state.buchungen||[]).some(b=>b.eb && jahrVon(b.datum) === J) && ENGINE.eroeffnungAusSalden){
+    let salden = null, quelle = "";
+    if(jahreMitBuchungen(state)[J-1]){ salden = saldoPer(state, (J-1)+"-12-31"); quelle = "closing "+(J-1); }
+    else { const v = (state.vergleichsjahre||[]).find(x=>x.jahr === J-1); if(v){ salden = v.salden; quelle = "imported closing "+(J-1); } }
+    if(salden){
+      if(!c.ix) c.ix = ctxOhneCache(state);
+      const r = ENGINE.eroeffnungAusSalden(state, c.ix, salden);
+      if(r.zeilen.length) eb = {id:"eb-"+J, datum:J+"-01-01", eb:true, virtuell:true, quelle:quelle,
+        text:"Opening balance from the "+quelle, z:r.zeilen, differenz:r.differenz, unbekannt:r.unbekannt};
+    }
+  }
+  c.eb[J] = eb;
+  return eb;
+}
+function ctxOhneCache(state){
+  const km = {}; konten(state).forEach(k => km[k.nr] = k);
+  const gm = {}; (state.gruppen||[]).forEach(g => gm[g.c] = g);
+  return {km:km, gm:gm, bm:{}};
+}
+// Bookings that make up a year: its opening plus the bookings dated in that year.
+function imJahr(state, J){
+  const eb = eroeffnung(state, J);
+  const b = (state.buchungen||[]).filter(x=> x && x.datum && jahrVon(x.datum) === J);
+  return eb ? [eb].concat(b) : b;
+}
+function alle(state){ return imJahr(state, state.jahr); }
+function grp(ix, nr){ const k = ix.km[nr]; return k ? ix.gm[k.grp] : null; }
+// Die Geldfluss-Zuordnung hängt am Konto. Fehlt sie dort, gilt die der Gruppe.
+function cfVon(ix, nr){
+  const k = ix.km[nr]; if(!k) return null;
+  if(k.cf) return k.cf;
+  const g = ix.gm[k.grp]; return g ? g.cf : null;
+}
+function cfKonto(ix, k){ if(k.cf) return k.cf; const g = ix.gm[k.grp]; return g ? g.cf : null; }
+function istER(g){ return !!g && g.s === "E"; }
+function istBilanz(g){ return !!g && (g.s === "A" || g.s === "P"); }
+
+/* ---- Salden --------------------------------------------------------- */
+function saldoPer(state, bis){
+  const s = {};
+  imJahr(state, jahrVon(bis)).forEach(b=>{
+    if(b.datum > bis) return;
+    b.z.forEach(z=>{ s[z[0]] = r2((s[z[0]]||0) + (z[1]||0) - (z[2]||0)); });
+  });
+  return s;
+}
+function saldoStart(state, von){
+  const s = {};
+  imJahr(state, jahrVon(von)).forEach(b=>{
+    if(!((b.datum < von) || (b.eb && b.datum <= von))) return;
+    b.z.forEach(z=>{ s[z[0]] = r2((s[z[0]]||0) + (z[1]||0) - (z[2]||0)); });
+  });
+  return s;
+}
+function buchungenIn(state, von, bis){
+  return (state.buchungen||[])
+    .filter(b => b.datum >= von && b.datum <= bis && !(b.eb && b.datum <= von))
+    .sort((a,c)=> a.datum===c.datum ? String(a.id).localeCompare(String(c.id)) : (a.datum<c.datum?-1:1));
+}
+function bewegung(state, von, bis){
+  const m = {};
+  buchungenIn(state, von, bis).forEach(b=> b.z.forEach(z=>{
+    if(!m[z[0]]) m[z[0]] = {soll:0, haben:0};
+    m[z[0]].soll  = r2(m[z[0]].soll  + (z[1]||0));
+    m[z[0]].haben = r2(m[z[0]].haben + (z[2]||0));
+  }));
+  return m;
+}
+
+/* ---- Kontrolle ------------------------------------------------------ */
+function kontrolle(state, ix){
+  let soll=0, haben=0; const schief=[];
+  (state.buchungen||[]).forEach(b=>{
+    let s=0,h=0;
+    b.z.forEach(z=>{ s=r2(s+(z[1]||0)); h=r2(h+(z[2]||0)); });
+    soll=r2(soll+s); haben=r2(haben+h);
+    if(Math.abs(s-h) > 0.005) schief.push(b.id);
+    b.z.forEach(z=>{ if(!ix.km[z[0]] && schief.indexOf(b.id)<0) schief.push(b.id); });
+  });
+  return {soll:r2(soll), haben:r2(haben), diff:r2(soll-haben), schief:schief};
+}
+
+/* ---- Ergebnis ------------------------------------------------------- */
+function ergebnisAus(ix, salden){
+  let t = 0;
+  Object.keys(salden).forEach(nr=>{ if(istER(grp(ix,nr))) t = r2(t + salden[nr]); });
+  return r2(-t);
+}
+
+/* ---- Bilanz --------------------------------------------------------- */
+function bilanz(state, ix, von, bis, zeigen){
+  const jetzt = saldoPer(state, bis);
+  const start = saldoStart(state, von);
+  const ergJetzt = ergebnisAus(ix, jetzt);
+  const ergStart = ergebnisAus(ix, start);
+  const alle = konten(state);
+
+  function sektion(code){
+    const gruppen = (state.gruppen||[]).filter(g=> istBilanz(g) && g.sek === code).map(g=>{
+      const ks = alle.filter(k=>k.grp===g.c).map(k=>{
+        const vz = (g.s==="A") ? 1 : -1;
+        return {nr:k.nr, name:k.name, wert:r2(vz*(jetzt[k.nr]||0)), vergleich:r2(vz*(start[k.nr]||0))};
+      }).filter(k=> Math.abs(k.wert)>0.005 || Math.abs(k.vergleich)>0.005 || (zeigen && zeigen.has(k.nr)));
+      return {code:g.c, titel:g.t, st:g.st||"auto", konten:ks,
+              summe:r2(ks.reduce((a,k)=>a+k.wert,0)),
+              vergleich:r2(ks.reduce((a,k)=>a+k.vergleich,0))};
+    }).filter(g=>g.konten.length);
+    return {code:code, titel:(state.sektionen&&state.sektionen[code])||code, gruppen:gruppen,
+            summe:r2(gruppen.reduce((a,g)=>a+g.summe,0)),
+            vergleich:r2(gruppen.reduce((a,g)=>a+g.vergleich,0))};
+  }
+
+  const aktiv  = SEK_AKTIV.map(sektion);
+  const passiv = SEK_PASSIV.map(sektion);
+  const ekS = passiv[passiv.length-1];
+  ekS.summe = r2(ekS.summe + ergJetzt);
+  ekS.vergleich = r2(ekS.vergleich + ergStart);
+  ekS.mitErgebnis = true;
+
+  const sumA = r2(aktiv.reduce((a,s)=>a+s.summe,0));
+  const sumP = r2(passiv.reduce((a,s)=>a+s.summe,0));
+  return {
+    stichtag:bis, vergleichstichtag:von,
+    aktiven:{titel:(state.titel&&state.titel.aktiven)||"Aktiven", sektionen:aktiv, summe:sumA,
+             vergleich:r2(aktiv.reduce((a,s)=>a+s.vergleich,0))},
+    passiven:{titel:(state.titel&&state.titel.passiven)||"Passiven", sektionen:passiv, summe:sumP,
+             vergleich:r2(passiv.reduce((a,s)=>a+s.vergleich,0))},
+    ergebnis:ergJetzt, ergebnisVergleich:ergStart,
+    eigenkapital:ekS.summe, fremdkapital:r2(sumP-ekS.summe),
+    differenz:r2(sumA-sumP)
+  };
+}
+
+/* ---- Reinvermögen --------------------------------------------------- */
+function reinvermoegen(state, ix, bis, alsStart){
+  const s = alsStart ? saldoStart(state, bis) : saldoPer(state, bis);
+  let aktiven=0, fk=0;
+  konten(state).forEach(k=>{
+    const g = ix.gm[k.grp]; if(!istBilanz(g)) return;
+    if(g.s==="A") aktiven = r2(aktiven + (s[k.nr]||0));
+    else if(g.sek!=="EK") fk = r2(fk - (s[k.nr]||0));
+  });
+  return r2(aktiven - fk);
+}
+
+/* ---- Klassierung: Ertrags- oder Aufwandkonto ------------------------- */
+// Entscheidend ist der Saldo über das ganze Geschäftsjahr, nicht der einzelne
+// Monat. Sonst würde die Auflösung einer Abgrenzung im Januar als Ertrag
+// gezählt und die Monatswerte ergäben in der Summe nicht die Jahreswerte.
+function klassierung(state, ix){
+  const jahr = saldoPer(state, state.jahr+"-12-31");
+  const m = {};
+  konten(state).forEach(k=>{
+    if(!istER(ix.gm[k.grp])) return;
+    m[k.nr] = (jahr[k.nr]||0) < 0 ? "ertrag" : "aufwand";
+  });
+  return m;
+}
+
+/* ---- Erfolgsrechnung ------------------------------------------------ */
+function erfolg(state, ix, von, bis, kl, zeigen){
+  const bew = bewegung(state, von, bis);
+  const erGruppen = (state.gruppen||[]).filter(istER);
+  const wert = {}, ktn = {};
+  erGruppen.forEach(g=>{ wert[g.c]=0; ktn[g.c]=[]; });
+
+  konten(state).forEach(k=>{
+    const g = ix.gm[k.grp]; if(!istER(g)) return;
+    const b = bew[k.nr] || {soll:0, haben:0};
+    const saldo = r2(b.soll - b.haben);
+    if(Math.abs(saldo) < 0.005 && !(zeigen && zeigen.has(k.nr))) return;
+    const w = r2((g.vz||1) * saldo);
+    ktn[g.c].push({nr:k.nr, name:k.name, wert:w});
+    wert[g.c] = r2(wert[g.c] + w);
+  });
+
+  const beitrag = g => (g.vz === -1 ? wert[g.c] : -wert[g.c]);
+  const zeilen = []; let kum = 0, block = 0;
+  erGruppen.forEach(g=>{
+    kum = r2(kum + beitrag(g)); block = r2(block + wert[g.c]);
+    zeilen.push({typ:"gruppe", code:g.c, titel:g.t, wert:wert[g.c], konten:ktn[g.c]});
+    if(g.zwBlock){ zeilen.push({typ:"zwsum", code:"zb:"+g.c, titel:g.zwBlock, wert:block, block:true}); block = 0; }
+    if(g.zw){ zeilen.push({typ:"zwsum", code:"zw:"+g.c, titel:g.zw, wert:kum}); block = 0; }
+  });
+  zeilen.push({typ:"total", code:"total", titel:(state.titel&&state.titel.ergebnis)||"Result for the period", wert:kum});
+
+  const klass = kl || klassierung(state, ix);
+  let ertrag=0, aufwand=0;
+  konten(state).forEach(k=>{
+    const b = bew[k.nr]; if(!b || !klass[k.nr]) return;
+    const saldo = r2(b.soll - b.haben);
+    if(klass[k.nr] === "ertrag") ertrag = r2(ertrag - saldo);
+    else aufwand = r2(aufwand + saldo);
+  });
+
+  return {von:von, bis:bis, zeilen:zeilen, gruppenwert:wert, ergebnis:kum,
+          ertrag:ertrag, aufwand:aufwand,
+          zwsum:(t)=>{ const z = zeilen.find(x=>x.typ==="zwsum" && x.titel===t); return z?z.wert:null; }};
+}
+
+/* ---- Nicht liquiditätswirksame Buchungen gegen Bilanzkonten ---------- */
+// Non-cash on account level: account flag "nc"/"cash" overrides the group.
+/* The cash flow lives in v5_cf_direkt.js (direct method from the bookings, since 12 October 2026). */
+
+/* ---- Fremdwährung --------------------------------------------------- */
+// Zeile = [Konto, Soll, Haben] oder [Konto, Soll, Haben, Fremdwährungsbetrag, Kurs].
+// Soll und Haben sind IMMER Basiswährung. Die Fremdwährung ist eine Zusatzspur.
+function fwSaldoPer(state, nr, bis){
+  let t = 0;
+  (state.buchungen||[]).forEach(b=>{
+    if(b.datum > bis) return;
+    b.z.forEach(z=>{ if(z[0]===nr && z[3]) t = r2(t + ((z[1]||0) > 0 ? z[3] : -z[3])); });
+  });
+  return t;
+}
+function neubewertung(state, ix, stichtag, kurse){
+  const chf = saldoPer(state, stichtag);
+  const zeilen = [];
+  konten(state).forEach(k=>{
+    if(!k.wkz || !istBilanz(ix.gm[k.grp])) return;
+    const kurs = kurse[k.wkz];
+    if(!kurs) return;
+    const fw = fwSaldoPer(state, k.nr, stichtag);
+    const soll = r2(fw * kurs);
+    const ist  = r2(chf[k.nr] || 0);
+    const diff = r2(soll - ist);
+    if(Math.abs(fw) < 0.005 && Math.abs(diff) < 0.005) return;
+    zeilen.push({nr:k.nr, name:k.name, wkz:k.wkz, fw:fw, kurs:kurs,
+                 buchwert:ist, neuwert:soll, differenz:diff});
+  });
+  return zeilen;
+}
+
+/* ---- Hauptbuch ------------------------------------------------------ */
+function hauptbuch(state, ix, nr, von, bis){
+  const start = saldoStart(state, von)[nr] || 0;
+  const tagVor = new Date(Date.parse(von+"T00:00:00Z") - 86400000).toISOString().slice(0,10);
+  let lauf = start, fwLauf = fwSaldoPer(state, nr, tagVor);
+  const fwAnfang = fwLauf, zeilen = [];
+  buchungenIn(state, von, bis).forEach(b=> b.z.forEach(z=>{
+    if(z[0] !== nr) return;
+    lauf = r2(lauf + (z[1]||0) - (z[2]||0));
+    if(z[3]) fwLauf = r2(fwLauf + ((z[1]||0) > 0 ? z[3] : -z[3]));
+    const gegen = b.z.filter(x=>x[0]!==nr).map(x=>x[0]);
+    zeilen.push({id:b.id, datum:b.datum, beleg:b.beleg, text:z[5] || b.text, zeilentext:z[5]||"",
+      soll:z[1]||0, haben:z[2]||0, saldo:lauf, fw:z[3]||0, kurs:z[4]||0, fwSaldo:fwLauf,
+      gegenkonto: gegen.length===1 ? gegen[0] : (gegen.length ? "div." : "—")});
+  }));
+  return {nr:nr, anfang:r2(start), zeilen:zeilen, ende:r2(lauf),
+    fwAnfang:r2(fwAnfang), fwEnde:r2(fwLauf),
+    summeSoll:r2(zeilen.reduce((a,z)=>a+z.soll,0)),
+    summeHaben:r2(zeilen.reduce((a,z)=>a+z.haben,0))};
+}
+
+/* ---- Jahresreihe für die Übersicht ---------------------------------- */
+function jahresreihe(state, ix){
+  const j = state.jahr, kl = klassierung(state, ix), reihe = [];
+  for(let m=1;m<=12;m++){
+    const von = j+"-"+String(m).padStart(2,"0")+"-01";
+    const bis = letzterTag(j,m);
+    const er = erfolg(state, ix, von, bis, kl);
+    reihe.push({m:m, name:MONATE[m-1], kurz:MONATE[m-1].slice(0,3),
+      ertrag:er.ertrag, aufwand:er.aufwand, ergebnis:er.ergebnis,
+      reinvermoegen:reinvermoegen(state, ix, bis)});
+  }
+  const jahr = erfolg(state, ix, j+"-01-01", j+"-12-31", kl);
+  return {monate:reihe, ertrag:jahr.ertrag, aufwand:jahr.aufwand, ergebnis:jahr.ergebnis,
+          reinvermoegenStart:reinvermoegen(state, ix, j+"-01-01", true),
+          reinvermoegenEnde:reinvermoegen(state, ix, j+"-12-31")};
+}
+
+/* ---- Flachsicht für Vergleichsspalten -------------------------------- */
+function flachBilanz(b){
+  const m = {};
+  [b.aktiven, b.passiven].forEach(teil=>{
+    m["seite:"+teil.titel] = teil.summe;
+    teil.sektionen.forEach(s=>{
+      m["sek:"+s.code] = s.summe;
+      s.gruppen.forEach(g=>{
+        m["grp:"+g.code] = g.summe;
+        g.konten.forEach(k=> m["k:"+k.nr] = k.wert);
+      });
+    });
+  });
+  m["aktiven"] = b.aktiven.summe; m["passiven"] = b.passiven.summe;
+  m["ergebnis"] = b.ergebnis;
+  return m;
+}
+function flachErfolg(er){
+  const m = {};
+  er.zeilen.forEach(z=>{
+    if(z.typ === "gruppe"){ m["grp:"+z.code] = z.wert; z.konten.forEach(k=> m["k:"+k.nr] = k.wert); }
+    else m[z.code] = z.wert;
+  });
+  m["ertrag"] = er.ertrag; m["aufwand"] = er.aufwand;
+  return m;
+}
+function jahreImBestand(state){
+  const j = {};
+  (state.buchungen||[]).forEach(b=> j[b.datum.slice(0,4)] = true);
+  return Object.keys(j).sort();
+}
+
+/* ---- Perioden ------------------------------------------------------- */
+function letzterTag(j,m){
+  const d = new Date(Date.UTC(j, m, 0));
+  return j+"-"+String(m).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0");
+}
+function perioden(jahr){
+  const p = [{k:"J", t:"Full year "+jahr, von:jahr+"-01-01", bis:jahr+"-12-31"}];
+  for(let q=1;q<=4;q++)
+    p.push({k:"Q"+q, t:"Q"+q+" "+jahr,
+            von:jahr+"-"+String((q-1)*3+1).padStart(2,"0")+"-01", bis:letzterTag(jahr,q*3)});
+  for(let m=1;m<=12;m++)
+    p.push({k:"M"+String(m).padStart(2,"0"), t:MONATE[m-1]+" "+jahr,
+            von:jahr+"-"+String(m).padStart(2,"0")+"-01", bis:letzterTag(jahr,m)});
+  return p;
+}
+
+return {alle:alle, imJahr:imJahr, eroeffnung:eroeffnung, jahreMitBuchungen:jahreMitBuchungen, grp:grp, MONATE:MONATE, SEK_AKTIV:SEK_AKTIV, SEK_PASSIV:SEK_PASSIV,
+        r2:r2, ctx:ctx, konten:konten, istER:istER, istBilanz:istBilanz,
+        saldoPer:saldoPer, saldoStart:saldoStart, bewegung:bewegung, buchungenIn:buchungenIn,
+        kontrolle:kontrolle, bilanz:bilanz, erfolg:erfolg, klassierung:klassierung,
+        hauptbuch:hauptbuch, reinvermoegen:reinvermoegen, jahresreihe:jahresreihe,
+        cfVon:cfVon, cfKonto:cfKonto, fwSaldoPer:fwSaldoPer, neubewertung:neubewertung,
+        flachBilanz:flachBilanz, flachErfolg:flachErfolg,
+        jahreImBestand:jahreImBestand,
+        perioden:perioden, letzterTag:letzterTag};
+})();
+if(typeof module !== "undefined"){ module.exports = ENGINE; }
+</script>

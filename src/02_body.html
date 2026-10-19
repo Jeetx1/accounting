@@ -1,0 +1,464 @@
+<body>
+<canvas id="fx-a" class="fx" aria-hidden="true"></canvas>
+<canvas id="fx-b" class="fx" aria-hidden="true"></canvas>
+<div class="licht" id="licht" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<!-- START -->
+<section class="start on" id="start">
+  <div class="startkarte">
+    <div class="marke">
+      <svg id="marke" width="58" height="58" viewBox="0 0 100 100" aria-hidden="true"></svg>
+      <div>
+        <h1>Accounting</h1>
+        <p class="lead">Double-entry bookkeeping. This window is the program; your figures live in their own file, which you open here.</p>
+      </div>
+    </div>
+    <div class="wahl">
+      <button type="button" id="s-oeffnen">
+        <span class="ic" data-icon="ordner"></span>
+        <span><b>Open accounting file</b><span>Choose an existing file. Saving writes back into the same file.</span></span>
+      </button>
+      <button type="button" id="s-neu">
+        <span class="ic" data-icon="neu"></span>
+        <span><b>Start a new accounting file</b><span>Your chart of accounts, no bookings. One file holds all your years.</span></span>
+      </button>
+    </div>
+    <p class="startfuss" id="start-hinweis"></p>
+  </div>
+</section>
+
+<!-- APPLICATION -->
+<div class="shell" id="shell">
+  <aside class="navleiste" id="navleiste">
+    <div class="mandant">
+      <input id="mandant" aria-label="Name" autocomplete="off">
+      <small id="dateiname"></small>
+    </div>
+    <nav class="haupt" id="nav" aria-label="Sections"></nav>
+    <div class="status">
+      <div class="pruefstreifen" id="pruefstreifen" aria-live="polite"></div>
+      <div class="knopfreihe">
+        <button type="button" class="sk speichern" id="speichern">Saved</button>
+        <details class="dmenu" id="dmenu">
+          <summary aria-label="File and tools"><span data-icon="mehr"></span></summary>
+          <div class="panel">
+            <button type="button" data-aktion="oeffnen">Open …</button>
+            <button type="button" data-aktion="neu">New year …</button>
+            <hr>
+            <button type="button" data-aktion="speichern">Save</button>
+            <button type="button" data-aktion="speichernAls">Save as …</button>
+            <button type="button" data-aktion="kopie">Save dated copy …</button>
+            <button type="button" data-aktion="backup">Backup folder …</button>
+            <hr>
+            <button type="button" data-aktion="export">Export …</button>
+            <button type="button" data-aktion="import">Import closing balances …</button>
+            <button type="button" data-aktion="csv">Journal as CSV</button>
+            <hr>
+            <button type="button" data-aktion="undo">Undo</button>
+            <button type="button" data-aktion="redo">Redo</button>
+            <hr>
+            <button type="button" data-aktion="schliessen">Close file</button>
+          </div>
+        </details>
+      </div>
+    </div>
+  </aside>
+
+  <main class="arbeit" id="arbeit">
+    <header class="kopf">
+      <button type="button" class="menuknopf" id="menuknopf" aria-label="Open menu"><span data-icon="menu"></span></button>
+      <h1 id="titel">Overview</h1>
+      <div class="ctl jahr"><select id="jahrwahl" aria-label="Financial year"></select></div>
+      <div class="ctl"><select id="periode" aria-label="Period"></select></div>
+      <div class="ctl"><select id="vergleich" aria-label="Comparison column"></select></div>
+      <div class="seg" role="group" aria-label="Range">
+        <button type="button" id="bPer" class="on">Period</button>
+        <button type="button" id="bYtd">Year to date</button>
+      </div>
+    </header>
+    <div class="untertitel" id="untertitel"></div>
+
+    <section class="page" id="p-uebersicht">
+      <div class="blatt" id="ue-held" data-render></div>
+      <div class="blatt"><div class="leiste" id="ue-leiste" data-render></div></div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Income and expenses</h2>
+          <div class="legende"><span><i style="background:var(--tinte2)"></i>Income</span><span><i style="background:#A9BDD6"></i>Expenses</span></div></div>
+        <div id="ue-dia1" data-render></div>
+      </div>
+      <div class="zweispaltig">
+        <div class="blatt"><div class="blockkopf"><h2>Result by month</h2></div><div id="ue-dia2" data-render></div></div>
+        <div class="blatt"><div class="blockkopf"><h2>Net worth at month end</h2></div><div id="ue-dia3" data-render></div></div>
+      </div>
+      <div class="blatt"><div class="blockkopf"><h2>The year in figures</h2></div><div class="tabelle" id="ue-tabelle" data-render></div></div>
+    </section>
+
+    <section class="page" id="p-ueberjahre">
+      <div class="fs-kopf"><span class="mut klein" id="ovMeta"></span></div>
+      <div id="ovCards" hidden></div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Investments</h2><span class="klein mut" id="ovDonutMeta"></span></div>
+        <div class="donut"><svg id="ovDonut" viewBox="0 0 220 220" role="img" aria-label="Selected investments"></svg><div class="donut-liste" id="ovDonutListe" data-render></div></div>
+      </div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Income, expenses and result by year</h2><span class="klein mut">Latest report of each financial year</span></div>
+        <div class="chart-wrap" id="ovBarWrap"><svg class="ovchart" id="ovBars" role="img" aria-label="Income, expenses and result by year"></svg><div class="tip" id="ovBarTip"></div></div>
+        <div class="legend"><span><i style="background:#2F5E91"></i>Income</span><span><i style="background:#A9BDD6"></i>Expenses</span><span><i style="background:#1F3F66"></i>Result</span>
+          <span><i style="background:repeating-linear-gradient(45deg,#C48A16 0 3px,transparent 3px 6px)"></i>Part year</span></div>
+      </div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Net worth</h2><span class="chip" id="ovWorthChip"></span></div>
+        <div class="chart-wrap" id="ovLineWrap"><svg class="ovchart" id="ovLine" role="img" aria-label="Net worth over time"></svg><div class="tip" id="ovLineTip"></div></div>
+        <div class="legend"><span><i style="background:#2F5E91"></i>Equity — net worth</span><span><i style="background:#8FA6BF"></i>Total assets</span></div>
+      </div>
+    </section>
+
+    <section class="page" id="p-anlagen">
+      <div class="fs-kopf"><span class="mut klein" id="invMeta"></span><span style="flex:1"></span>
+        <label class="klein mut" for="selInv">View</label><select class="eingabe" id="selInv"></select></div>
+      <div class="kpis" id="invKpis" data-render></div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Paid in vs. value adjustment</h2><span class="chip" id="invHorizonChip"></span></div>
+        <div class="chart-wrap" id="chartWrap"><svg class="chart" id="invChart" role="img" aria-label="Investment value over time"></svg><div class="tip" id="invTip"></div></div>
+        <div class="legend"><span><i style="background:#4A7DB5"></i>Paid in (net contributions)</span><span><i style="background:#2E7D5B"></i>Value adjustment — gain</span>
+          <span><i style="background:#A6262D"></i>Value adjustment — loss</span><span><i style="background:repeating-linear-gradient(45deg,#C48A16 0 3px,transparent 3px 6px)"></i>Forecast</span></div>
+      </div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Forecast horizon</h2></div>
+        <div class="slider-row"><div class="yrs" id="yrsLbl"></div><input type="range" id="yrsRange" min="0" max="30" step="1" value="10" aria-label="Forecast horizon in years"><div class="klein mut" id="yrsTo"></div></div>
+      </div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Assumptions per investment</h2><span class="klein mut">Monthly pay-in and expected annual return drive the forecast</span>
+          <button type="button" class="btn leicht mini" id="btnResetFc">Reset forecast</button></div>
+        <div class="tabelle"><table class="inv" id="invTable"></table></div>
+      </div>
+    </section>
+
+    <section class="page" id="p-sachanlagen">
+      <div class="blatt" id="sa-held" data-render></div>
+      <div class="blatt"><div class="leiste" id="sa-leiste" data-render></div></div>
+      <div class="zweispaltig">
+        <div class="blatt"><div class="blockkopf"><h2>Net book value at month end</h2><span class="blattnotiz">per schedule</span></div><div id="sa-dia1" data-render></div></div>
+        <div class="blatt"><div class="blockkopf"><h2>Depreciation by month</h2></div><div id="sa-dia2" data-render></div></div>
+      </div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Register</h2><button type="button" class="btn leicht mini" id="sa-neu">Register an asset already on the books</button></div>
+        <div id="sa-fort" data-render></div>
+        <div class="tabelle" id="sa-tabelle" data-render></div>
+        <p class="hinweis" style="margin:10px 0 0">A purchase booked onto an account of a fixed-asset group asks for the register on its own. Straight-line to the residual value; monthly bookings against the contra account, under the asset's own plan, so they undo and roll into the next year like spreads do.</p>
+      </div>
+      <div class="blatt"><div class="blockkopf"><h2>Schedule</h2><span class="blattnotiz" id="sa-plan-titel"></span></div><div id="sa-plan" data-render></div></div>
+    </section>
+
+    <section class="page" id="p-buchen">
+      <div class="raster r-buchen">
+        <div style="min-width:0">
+        <div class="blatt maske" id="maske">
+          <svg class="siegel" id="siegel" viewBox="0 0 200 200" aria-hidden="true"></svg>
+          <div id="bu-banner" data-render></div>
+          <div id="bu-schnell">
+            <div class="schnell">
+              <div class="feld"><label for="bu-datum"><span>Date</span>
+                  <span><button type="button" class="kurzlink" id="bu-heute" tabindex="-1">Today</button> · <button type="button" class="kurzlink" id="bu-monatsende" tabindex="-1">End</button></span></label>
+                <input class="eingabe" id="bu-datum" inputmode="numeric" autocomplete="off" placeholder="dd.mm.yyyy" aria-describedby="bu-datum-info">
+                <div class="kontoinfo" id="bu-datum-info"></div></div>
+              <div class="feld f-text"><label for="bu-text">Text</label>
+                <input class="eingabe" id="bu-text" autocomplete="off" placeholder="What happened?"></div>
+              <div class="feld"><label for="bu-betrag">Amount</label>
+                <input class="eingabe num" id="bu-betrag" inputmode="decimal" autocomplete="off" placeholder="0.00">
+                <div class="kontoinfo" id="bu-betrag-info"></div></div>
+              <div class="feld kontofeld konto-soll"><label for="bu-soll">Debit</label>
+                <input class="eingabe" id="bu-soll" autocomplete="off" placeholder="Account">
+                <div class="kontoinfo" id="bu-soll-info"></div></div>
+              <div class="feld kontofeld konto-haben"><label for="bu-haben">Credit</label>
+                <input class="eingabe" id="bu-haben" autocomplete="off" placeholder="Account">
+                <div class="kontoinfo" id="bu-haben-info"></div></div>
+            </div>
+            <div id="bu-fw" data-render></div>
+            <div id="bu-split" data-render></div>
+          </div>
+          <div id="bu-zeilenmodus" class="zeilenmodus" hidden data-render></div>
+          <div id="bu-satz" data-render></div>
+          <div class="waage" id="bu-waage" data-render></div>
+          <div class="verteilung" id="bu-verteilung-box">
+            <label class="schalter"><input type="checkbox" id="vt-an" tabindex="-1"> Spread over months</label>
+            <div id="vt-panel" hidden>
+              <div class="vt-felder">
+                <div class="feld"><label for="vt-start">First month</label><input class="eingabe" type="month" id="vt-start"></div>
+                <div class="feld"><label for="vt-monate">Number of months</label><input class="eingabe num" type="number" id="vt-monate" min="2" max="60" step="1" value="12"></div>
+                <div class="klein mut" id="vt-erklaerung"></div>
+              </div>
+              <div id="vt-vorschau" data-render></div>
+            </div>
+          </div>
+          <div class="pruefungen" id="bu-pruefungen" data-render></div>
+          <div class="aktionen">
+            <button type="button" class="btn" id="bu-ok">Book <kbd>⏎</kbd></button>
+            <button type="button" class="btn leicht" id="bu-kopie" hidden>Copy as new booking</button>
+            <button type="button" class="btn leicht" id="bu-reset" tabindex="-1">Clear</button>
+            <button type="button" class="kurzlink" id="bu-modus" tabindex="-1">Enter as lines</button>
+            <span style="flex:1"></span>
+            <button type="button" class="btn gefahr" id="bu-del" hidden>Delete</button>
+          </div>
+        </div>
+        <div class="blatt eng">
+          <div class="blockkopf"><h2>Latest bookings</h2><span class="blattnotiz">last 20 entered · click to edit</span></div>
+          <div class="tabelle" id="bu-letzte" data-render></div>
+        </div>
+        </div>
+        <div>
+          <div class="blatt eng"><h2 id="bu-verlauf-titel">Recent bookings</h2><div id="bu-verlauf-saldo" data-render></div><div class="seitenliste verlauf" id="bu-verlauf" data-render></div></div>
+          <div class="blatt eng"><h2>Spreads</h2><div class="seitenliste" id="bu-plaene" data-render></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="p-journal">
+      <div class="blatt">
+        <div class="suche">
+          <input class="eingabe" type="search" id="jo-suche" placeholder="Search text, account or amount">
+          <button type="button" class="btn leicht" id="jo-auf">Expand all</button>
+          <button type="button" class="btn leicht" id="jo-zu">Collapse all</button>
+          <button type="button" class="btn leicht" id="jo-xlsx" title="All bookings of the financial year as Excel">Excel (year)</button>
+          <button type="button" class="btn leicht" id="jo-pdf" title="All bookings of the financial year as PDF">PDF (year)</button>
+        </div>
+        <div id="jo-liste" data-render></div>
+      </div>
+    </section>
+
+    <section class="page" id="p-hauptbuch">
+      <div class="blatt">
+        <div style="display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-start;margin-bottom:16px">
+          <div class="feld kontofeld" style="flex:1 1 320px;max-width:520px">
+            <label for="hb-konto">Account</label>
+            <input class="eingabe" type="text" id="hb-konto" autocomplete="off" placeholder="Number or name">
+            <div class="kontoinfo" id="hb-info"></div>
+          </div>
+          <div class="feld">
+            <label for="hb-export-zeit">Export this account</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <select class="eingabe" id="hb-export-zeit" style="width:auto;min-width:150px" aria-label="Export period"></select>
+              <button type="button" class="btn leicht" id="hb-xlsx">Excel</button>
+              <button type="button" class="btn leicht" id="hb-pdf">PDF</button>
+            </div>
+          </div>
+        </div>
+        <div class="tabelle" id="hb-inhalt" data-render></div>
+      </div>
+    </section>
+
+    <section class="page" id="p-bilanz">
+      <div class="fs-kopf">
+        <div class="ctl fs-wahl"><select class="fs-p" aria-label="Report"></select><span class="vs">compared with</span><select class="fs-c" aria-label="Compare with"></select></div>
+        <div class="fs-rechts"><label class="schalter klein"><input type="checkbox" class="fs-var"> Variances</label><label class="schalter klein"><input type="checkbox" id="bi-null"> Nil balances</label><div class="seg fs-klapp"><button type="button" data-expand="bi-tab">Expand all</button><button type="button" data-collapse="bi-tab">Collapse all</button></div></div>
+      </div>
+      <div class="blatt"><div class="blockkopf"><h2>Statement of financial position</h2></div>
+        <div class="tabelle fs-tabelle"><table class="abschluss" id="bi-tab"></table></div><div id="bi-check" data-render></div></div>
+    </section>
+    <section class="page" id="p-erfolg">
+      <div class="fs-kopf">
+        <div class="ctl fs-wahl"><select class="fs-p" aria-label="Report"></select><span class="vs">compared with</span><select class="fs-c" aria-label="Compare with"></select></div>
+        <div class="fs-rechts"><label class="schalter klein"><input type="checkbox" class="fs-var"> Variances</label><label class="schalter klein"><input type="checkbox" id="er-null"> Nil balances</label><div class="seg fs-klapp"><button type="button" data-expand="er-tab">Expand all</button><button type="button" data-collapse="er-tab">Collapse all</button></div></div>
+      </div>
+      <div class="blatt"><div class="blockkopf"><h2>Statement of income and expenses</h2></div>
+        <div class="tabelle fs-tabelle"><table class="abschluss" id="er-tab"></table></div><div id="er-check" data-render></div></div>
+    </section>
+    <section class="page" id="p-geldfluss">
+      <div class="fs-kopf">
+        <div class="ctl fs-wahl"><select class="fs-p" aria-label="Report"></select><span class="vs">compared with</span><select class="fs-c" aria-label="Compare with"></select></div>
+        <div class="fs-rechts"><div class="seg fs-klapp"><button type="button" data-expand="gf-tab">Expand all</button><button type="button" data-collapse="gf-tab">Collapse all</button></div></div>
+      </div>
+      <div class="blatt"><div class="blockkopf"><h2>Cash flow statement</h2><span class="blattnotiz">Direct method, from the bookings</span></div>
+        <div class="tabelle fs-tabelle"><table class="abschluss" id="gf-tab"></table></div><div id="gf-check" data-render></div><div id="gf-note" data-render></div></div>
+    </section>
+
+    <section class="page" id="p-monate">
+      <div class="blatt">
+        <div class="blockkopf"><h2>Income statement by month</h2>
+          <span style="display:flex;gap:8px"><button type="button" class="btn leicht mini" data-alle="monate" data-auf="1">Expand all</button><button type="button" class="btn leicht mini" data-alle="monate" data-auf="0">Collapse all</button>
+          <button type="button" class="btn leicht mini" id="mo-export">Export …</button></span></div>
+        <div class="monate" id="mo-erfolg" data-render></div>
+      </div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Balance sheet at each month end</h2></div>
+        <div class="monate" id="mo-bilanz" data-render></div>
+      </div>
+    </section>
+
+    <section class="page" id="p-jahre">
+      <div class="blatt">
+        <div class="blockkopf"><h2>Income statement by year</h2>
+          <span style="display:flex;gap:8px;align-items:center"><label class="schalter" style="font-size:13px"><input type="checkbox" id="ja-delta"> Show changes</label>
+          <button type="button" class="btn leicht mini" data-alle="jahre" data-auf="1">Expand all</button><button type="button" class="btn leicht mini" data-alle="jahre" data-auf="0">Collapse all</button></span></div>
+        <div class="monate jahre" id="ja-erfolg" data-render></div>
+      </div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Balance sheet at each year end</h2></div>
+        <div class="monate jahre" id="ja-bilanz" data-render></div>
+      </div>
+    </section>
+
+    <section class="page" id="p-konten">
+      <div class="blatt">
+        <h2>Add account</h2>
+        <div style="display:grid;grid-template-columns:110px minmax(0,1fr) 280px auto;gap:10px;align-items:end;margin-top:10px">
+          <div class="feld"><label for="kt-nr">Number</label><input class="eingabe" type="text" id="kt-nr" placeholder="1020.3"></div>
+          <div class="feld"><label for="kt-name">Name</label><input class="eingabe" type="text" id="kt-name" placeholder="Bank account GBP"></div>
+          <div class="feld"><label for="kt-grp">Group</label><select class="eingabe" id="kt-grp"></select></div>
+          <button type="button" class="btn" id="kt-add">Add</button>
+        </div>
+      </div>
+      <div class="blatt"><div class="tabelle" id="kt-liste" data-render></div></div>
+      <div class="zweispaltig">
+        <div class="blatt"><h2>System accounts and settings</h2><div id="kt-system" data-render></div></div>
+        <div class="blatt"><h2>Foreign currencies</h2><div id="wa-liste" data-render></div></div>
+      </div>
+    </section>
+
+    <section class="page" id="p-aufbau">
+      <div class="blatt"><h2>Balance sheet groups</h2>
+        <p class="hinweis">Order, name and section of each group. Every statement page, the cash flow, the exports and the reports follow this page. The cash-flow setting applies to every account in the group; single accounts can deviate in the chart of accounts, and Statement settings can override it per account.</p>
+        <div class="tabelle" id="gr-bilanz" data-render></div></div>
+      <div class="blatt"><h2>Income statement groups</h2>
+        <p class="hinweis">A running subtotal follows the group and adds up from the top. A block total adds the groups since the previous subtotal. Leave empty for none. Subtotals named Total income, Gross result, EBITDA, EBIT and EBT are recognised by the overview and the key figures.</p>
+        <div class="tabelle" id="gr-erfolg" data-render></div></div>
+      <div class="blatt"><h2>Add group</h2>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 250px 250px auto;gap:10px;align-items:end;margin-top:10px">
+          <div class="feld"><label for="gr-name">Name</label><input class="eingabe" type="text" id="gr-name" placeholder="Pets"></div>
+          <div class="feld"><label for="gr-sek">Section</label><select class="eingabe" id="gr-sek"></select></div>
+          <button type="button" class="btn" id="gr-add">Add</button>
+        </div></div>
+      <div class="blatt"><h2>Labels</h2><div id="gr-titel" data-render></div></div>
+    </section>
+
+    <section class="page" id="p-fsmapping">
+      <div class="blatt">
+        <div class="blockkopf"><h2>Cash flow classes</h2><label class="schalter klein"><input type="checkbox" id="cfShowAll"> Show every account</label></div>
+        <p class="hinweis">Where the cash of each balance sheet account goes in the cash flow statement. An account in <b>Cash</b> counts like a bank account; a credit card there counts like one with a negative balance, so card purchases show under their category. Income and expense accounts are always operating; the FX accounts and unrealised value changes are exchange rate effects. <b>Shown under</b> puts the cash of an operating account on an income statement line instead of its own (taxes paid under Direct taxes). Prepayments booked as spreads always show under the accounts the spread releases to. Amounts: cash flow between the two reports chosen on the statement pages.</p>
+        <div class="tabelle"><table class="inv" id="cfMapTable"></table></div>
+      </div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Investments</h2></div>
+        <p class="hinweis">Which accounts make up each investment: the pay-in accounts and the account holding its value adjustment.</p>
+        <div class="tabelle"><table class="inv" id="invMapTable"></table></div>
+        <button type="button" class="btn leicht mini" id="btnRedetect" style="margin-top:12px">Detect again from the accounts</button>
+      </div>
+    </section>
+
+    <section class="page" id="p-vergleich">
+      <div class="blatt">
+        <div class="blockkopf"><h2>Years in this file</h2></div>
+        <p class="hinweis">Each year opens with the closing of the year before: balance sheet accounts carry over, equity and the result roll into the equity-at-beginning account. Nothing is booked for that. A closed year is read-only; reopen it to change a booking.</p>
+        <div class="tabelle" id="vg-jahre" data-render></div>
+        <div id="vg-backup" data-render style="margin-top:14px"></div>
+      </div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Imported closings</h2>
+          <button type="button" class="btn" id="vg-import">Import closing balances</button></div>
+        <p class="hinweis">Closing balance lists from Banana, Abacus, Excel or this program, for years without bookings in this file. Only the balance per account is stored. The closing of the year just before the first booked year is its opening balance.</p>
+        <div class="tabelle" id="vg-liste" data-render></div>
+      </div>
+      <div class="blatt">
+        <div class="blockkopf"><h2>Comparison file</h2></div>
+        <p class="hinweis">Another accounting file with all its bookings, for example last year. It is only read, never changed, and evaluated with the structure of this file.</p>
+        <div id="vg-datei" data-render></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- DIALOGS -->
+<div class="hg" id="dlg-frage" role="dialog" aria-modal="true">
+  <div class="dlg"><h3 id="fr-titel"></h3><div class="lead" id="fr-text"></div><div class="knoepfe" id="fr-knoepfe"></div></div>
+</div>
+
+<div class="hg" id="dlg-export" role="dialog" aria-modal="true">
+  <div class="dlg gross">
+    <h3>Export</h3>
+    <div class="feld" style="max-width:220px"><label for="ex-status">Status of the PDF reports</label><select class="eingabe" id="ex-status">
+      <option value="entwurf">Draft</option><option value="definitiv">Final</option></select></div>
+    <div class="schritt">
+      <h4>Financial statements</h4>
+      <p class="lead" style="margin:0 0 10px" id="ex-fs-info">Overview, balance sheet, income statement, cash flow and investments for the report and comparison chosen on the statement pages.</p>
+      <div class="knoepfe" style="justify-content:flex-start;margin-top:0">
+        <button type="button" class="btn" id="ex-fs-pdf">PDF detailed</button><button type="button" class="btn leicht" id="ex-fs-sum">PDF summarized</button><button type="button" class="btn leicht" id="ex-fs-xlsx">Excel</button></div>
+    </div>
+    <div class="schritt">
+      <h4>Twelve months</h4>
+      <p class="lead" style="margin:0 0 10px">Income statement per month and balance sheet at each month end, January to December.</p>
+      <div class="knoepfe" style="justify-content:flex-start;margin-top:0">
+        <button type="button" class="btn leicht" id="ex-mo-xlsx">Excel</button><button type="button" class="btn leicht" id="ex-mo-pdf">PDF</button></div>
+    </div>
+    <div id="ex-hinweise"></div>
+    <div class="knoepfe"><button type="button" class="btn leicht" data-schliessen>Close</button></div>
+  </div>
+</div>
+
+<div class="hg" id="dlg-import" role="dialog" aria-modal="true">
+  <div class="dlg gross">
+    <h3>Import closing balances</h3>
+    <p class="lead">Paste a balance list or choose a file. Nothing is stored until the check passes and you confirm.</p>
+    <div class="zweispaltig" style="gap:12px">
+      <div class="feld"><label for="im-text">Cells copied from Excel</label>
+        <textarea class="eingabe" id="im-text" placeholder="Account	Name	Balance	Prior year&#10;1020	Bank account CHF	2'500.00	1'800.00"></textarea></div>
+      <div class="feld"><label>Or a file</label>
+        <button type="button" class="btn leicht" id="im-datei" style="align-self:flex-start">Choose file (xlsx, csv, txt)</button>
+        <div class="klein mut" id="im-dateiname" style="margin-top:6px"></div>
+        <div class="feld" id="im-blatt-box" hidden style="margin-top:10px"><label for="im-blatt">Sheet</label><select class="eingabe" id="im-blatt"></select></div>
+      </div>
+    </div>
+    <div id="im-analyse"></div>
+    <div class="knoepfe">
+      <button type="button" class="btn leicht" data-schliessen>Cancel</button>
+      <button type="button" class="btn" id="im-ok" disabled>Import</button>
+    </div>
+  </div>
+</div>
+
+<div class="hg" id="dlg-anlage" role="dialog" aria-modal="true">
+  <div class="dlg gross">
+    <h3 id="an-titel">New asset</h3>
+    <p class="lead" id="an-lead" style="margin:0 0 12px"></p>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px">
+      <div class="feld" style="grid-column:span 2"><label for="an-text">Asset</label><input class="eingabe" id="an-text" autocomplete="off" placeholder="Company car"></div>
+      <div class="feld"><label for="an-datum">Acquired on</label><input class="eingabe" id="an-datum" inputmode="numeric" autocomplete="off" placeholder="dd.mm.yyyy"></div>
+      <div class="feld"><label for="an-kosten">Cost</label><input class="eingabe num" id="an-kosten" inputmode="decimal" autocomplete="off" placeholder="0.00"></div>
+      <div class="feld" style="grid-column:span 2"><label for="an-konto">Asset account</label><select class="eingabe" id="an-konto"></select></div>
+      <div class="feld" style="grid-column:span 2"><label for="an-wb">Contra account (accumulated depreciation)</label><select class="eingabe" id="an-wb"></select></div>
+      <div class="feld" style="grid-column:span 2"><label for="an-aufwand">Depreciation account</label><select class="eingabe" id="an-aufwand"></select></div>
+      <div class="feld"><label for="an-start">First month</label><input class="eingabe" type="month" id="an-start"></div>
+      <div class="feld"><label for="an-rhythmus">Booked</label><select class="eingabe" id="an-rhythmus"><option value="monat">monthly, at month end</option><option value="jahr">once a year, at 31.12.</option></select></div>
+      <div class="feld"><label for="an-monate">Useful life, months <span style="font-weight:400;color:var(--text3)">· <button type="button" class="kurzlink" data-an-jahre="3">3 y</button> <button type="button" class="kurzlink" data-an-jahre="4">4 y</button> <button type="button" class="kurzlink" data-an-jahre="5">5 y</button> <button type="button" class="kurzlink" data-an-jahre="10">10 y</button></span></label><input class="eingabe num" type="number" id="an-monate" min="1" max="1200" step="1"></div>
+      <div class="feld"><label for="an-restwert">Residual value</label><input class="eingabe num" id="an-restwert" inputmode="decimal" autocomplete="off" placeholder="0.00"></div>
+      <div class="feld" id="an-ab-box"><label for="an-ab">Register books from</label><input class="eingabe" type="month" id="an-ab"></div>
+      <div class="feld" id="an-vorher-box"><label for="an-vorher">Depreciated before that, by hand</label><input class="eingabe num" id="an-vorher" inputmode="decimal" autocomplete="off" placeholder="0.00"></div>
+    </div>
+    <div id="an-vorschau"></div>
+    <div class="knoepfe">
+      <button type="button" class="btn leicht" id="an-abbruch">Cancel</button>
+      <button type="button" class="btn leicht" id="an-nicht" hidden>Not an asset</button>
+      <button type="button" class="btn" id="an-ok">Register and book</button>
+    </div>
+  </div>
+</div>
+
+<div class="hg" id="dlg-abgang" role="dialog" aria-modal="true">
+  <div class="dlg">
+    <h3 id="ab-titel">Sell or scrap</h3>
+    <p class="lead" style="margin:0 0 12px">Depreciation runs to the month of the disposal; the asset and its accumulated depreciation leave the balance sheet, the difference to the proceeds is the gain or loss. <span id="ab-konten"></span></p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="feld"><label for="ab-datum">Disposal date</label><input class="eingabe" id="ab-datum" inputmode="numeric" autocomplete="off" placeholder="dd.mm.yyyy"></div>
+      <div class="feld"><label for="ab-erloes">Proceeds (0 = scrapped)</label><input class="eingabe num" id="ab-erloes" inputmode="decimal" autocomplete="off" placeholder="0.00"></div>
+      <div class="feld" style="grid-column:span 2"><label for="ab-konto">Proceeds received on</label><select class="eingabe" id="ab-konto"></select></div>
+    </div>
+    <div id="ab-vorschau"></div>
+    <div class="knoepfe"><button type="button" class="btn leicht" id="ab-abbruch">Cancel</button><button type="button" class="btn" id="ab-ok">Book the disposal</button></div>
+  </div>
+</div>
+
+<div class="meldungen" id="meldungen" aria-live="polite"></div>
+<input type="file" id="dateiwahl" accept=".json,application/json" hidden>
+<input type="file" id="importwahl" accept=".xlsx,.csv,.txt,.tsv,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+<div id="bericht"></div>

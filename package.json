@@ -1,0 +1,12 @@
+{
+  "name": "accounting",
+  "private": true,
+  "description": "Personal double-entry accounting: a single-file HTML app with its data in a separate .json file.",
+  "scripts": {
+    "build": "./build.sh",
+    "test": "./run_tests.sh"
+  },
+  "devDependencies": {
+    "jsdom": "24.1.3"
+  }
+}

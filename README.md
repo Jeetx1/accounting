@@ -9,7 +9,7 @@ twelve-month view, year comparison and closing, Excel and PDF exports. No librar
 The app holds no data: your books are a separate `.json` file you open in it, and Save writes straight back into
 that file (Chrome/Edge on a computer) or downloads it (other browsers, iPhone).
 
-- App: `docs/index.html` (built from `src/` by `./build.sh`; served by GitHub Pages from `/docs`)
+- App: `docs/index.html` (built from `src/` by `./build.sh`, or on Windows by double-clicking `build.cmd`; served by GitHub Pages from `/docs`)
 - Tests: `./run_tests.sh` (jsdom, synthetic data from `tests/make_fixture.js`; CI runs them on every push)
 - New file: start the app and choose *New*; it starts from the neutral chart of accounts in `src/10_template.html`.
 

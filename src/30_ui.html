@@ -135,10 +135,13 @@ function rosettenPfad(cx, cy, rho, amp, k, ph){
 }
 function baueMarkeUndSiegel(){
   const m = $("#marke");
-  if(m){ let p = ""; for(let j=0;j<9;j++) p += `<path d="${rosettenPfad(50,50,18+j*3.4,2.2,12,j*.4)}"/>`;
-    m.innerHTML = `<defs><linearGradient id="mf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9CC4F0"/><stop offset=".45" stop-color="#C5B7EE"/><stop offset=".8" stop-color="#F0D58C"/></linearGradient></defs>
-      <g fill="none" stroke="url(#mf)" stroke-width=".8">${p}</g><circle cx="50" cy="50" r="13" fill="#0A1A2B" stroke="url(#mf)" stroke-width="1"/>
-      <path d="M44 50.5l4 4 8-9" fill="none" stroke="#E9F0F9" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`; }
+  // the app logo: debit equals credit, in a gold ring, on a rounded square (the same mark as the favicon)
+  if(m){ let p = ""; for(let i=0;i<72;i++){ const t = i/72*Math.PI*2, c = Math.cos(t), s = Math.sin(t);
+      p += (i?"L":"M")+(50+50*Math.sign(c)*Math.pow(Math.abs(c),.4)).toFixed(1)+" "+(50+50*Math.sign(s)*Math.pow(Math.abs(s),.4)).toFixed(1); }
+    m.innerHTML = `<defs><linearGradient id="mf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2F5E91"/><stop offset="1" stop-color="#10263D"/></linearGradient></defs>
+      <path d="${p}Z" fill="url(#mf)" stroke="rgba(170,200,240,.28)" stroke-width="1"/>
+      <circle cx="50" cy="50" r="27" fill="none" stroke="#F0C96A" stroke-width="3.2"/>
+      <rect x="36" y="40" width="28" height="6.5" rx="3.25" fill="#fff"/><rect x="36" y="53.5" width="28" height="6.5" rx="3.25" fill="#fff"/>`; }
   const s = $("#siegel");
   if(s){ let p = ""; for(let j=0;j<6;j++) p += `<path d="${rosettenPfad(100,100,72+j*3.6,3,36,j*.5)}"/>`;
     s.innerHTML = `<defs><linearGradient id="sf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4A7DB5"/><stop offset=".5" stop-color="#8E7BD6"/><stop offset="1" stop-color="#D4A93A"/></linearGradient></defs>

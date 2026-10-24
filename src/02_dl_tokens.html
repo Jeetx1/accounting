@@ -1,0 +1,312 @@
+<!-- DESIGN LAB kit, copied from APPS/01 DESIGN LAB/02 Build Kit FINAL/common. Never edit here: refresh with 01 READ FIRST/tools/dl_sync.py -->
+<!-- THEME TOKENS: Glass, Ember, Prism -->
+<style id="tokens">
+/* GLASS · frosted panels over a slow drifting light. Dark, cool blue. */
+:root[data-theme="glass"]{
+  --color-scheme:dark;
+
+  /* colour: surfaces */
+  --bg:#070B10;
+  --bg-image:radial-gradient(120% 70% at 50% -10%,#10202F 0%,rgba(16,32,47,0) 60%),radial-gradient(80% 60% at 100% 100%,rgba(47,94,145,.16),rgba(47,94,145,0) 70%);
+  --surface:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.035));
+  --surface-solid:#111A23;
+  --surface-raised:linear-gradient(180deg,rgba(34,46,60,.9),rgba(18,26,35,.94));
+  --group-bg:var(--surface);
+  --border:rgba(255,255,255,.11);
+  --border-strong:rgba(255,255,255,.2);
+  --hairline:rgba(255,255,255,.06);
+  --neutral-soft:rgba(255,255,255,.08);
+  --row-hover:rgba(255,255,255,.05);
+
+  /* colour: text */
+  --text:#F1F6FA; --text-2:#A9B7C4; --text-3:#6E7D8B; --text-4:#4A5662;
+  --eyebrow:#7DB1E6;
+
+  /* colour: accent and states */
+  --accent:#7DB1E6; --accent-text:#C9DDF5; --accent-soft:rgba(125,177,230,.15);
+  --primary-bg:linear-gradient(180deg,#DCEBFA,#A9CDF3); --primary-text:#08131E;
+  --primary-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 10px 26px -14px rgba(125,177,230,.75);
+  --secondary-bg:rgba(255,255,255,.09); --secondary-text:#F1F6FA; --secondary-border:rgba(255,255,255,.12);
+  --btn-hover-overlay:rgba(255,255,255,.1);
+  --danger:#F0948C; --danger-bg:linear-gradient(180deg,#C9665D,#A9504A); --danger-on:#FFF4F2;
+  --danger-soft:rgba(224,122,114,.14); --danger-line:rgba(224,122,114,.35); --danger-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+  --success:#86D4C4; --success-soft:rgba(134,212,196,.14);
+  --warning:#E39A12; --warning-deep:#C27F06; --warning-on:#1B1203; --warning-glow:rgba(227,154,18,.45);
+  --focus:#7DB1E6; --focus-ring:rgba(125,177,230,.2); --selection:rgba(125,177,230,.35);
+  --chip-on-bg:#C9DDF5; --chip-on-text:#0A1520;
+
+  /* colour: charts */
+  --chart-1:#7DB1E6; --chart-2:#C9DDF5; --chart-3:#B9A9F0; --chart-4:#86D4C4; --chart-5:#4A7DB5;
+  --chart-grid:rgba(255,255,255,.07); --chart-axis:#6E7D8B; --chart-area:.32; --chart-bar-r:7;
+  --tip-bg:rgba(24,34,46,.95); --tip-text:#F1F6FA;
+
+  /* colour: chrome */
+  --header-bg:linear-gradient(180deg,rgba(7,11,16,.8),rgba(7,11,16,.55)); --header-border:rgba(255,255,255,.06); --header-blur:blur(20px) saturate(160%);
+  --tabs-bg:rgba(255,255,255,.06); --tabs-border:rgba(255,255,255,.1); --tabs-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+  --tab-text:#A9B7C4; --tab-active-text:#F1F6FA; --tab-active-bg:rgba(255,255,255,.14);
+  --tab-active-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 6px 16px -8px rgba(0,0,0,.6);
+  --tabbar-bg:rgba(20,28,38,.72); --tabbar-shadow:0 18px 40px -16px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.1);
+  --tabbar-active-bg:rgba(255,255,255,.14); --tabbar-active-shadow:inset 0 1px 0 rgba(255,255,255,.14); --tabbar-active-text:#F1F6FA;
+  --seg-bg:rgba(255,255,255,.06); --seg-active-bg:#C9DDF5; --seg-active-text:#0A1520; --seg-active-shadow:0 4px 12px -6px rgba(0,0,0,.6);
+  --overlay:rgba(2,5,9,.5); --overlay-blur:blur(8px);
+  --toast-bg:rgba(28,38,50,.9); --toast-text:#F1F6FA; --toast-action:#9CC4F0;
+
+  /* colour: fields and controls */
+  --field-bg:rgba(255,255,255,.06); --field-bg-focus:rgba(255,255,255,.09); --field-border:rgba(255,255,255,.11); --field-border-hover:rgba(255,255,255,.2);
+  --field-shadow:none; --field-label:#A9B7C4; --picker-filter:invert(1);
+  --switch-off:rgba(255,255,255,.16); --switch-on:#4A7DB5; --switch-knob:#FFFFFF; --switch-knob-shadow:0 2px 6px rgba(0,0,0,.35); --check-mark:#FFFFFF;
+  --table-bg:rgba(0,0,0,.08); --table-border:rgba(255,255,255,.08); --table-head-bg:rgba(42,60,80,.94); --th-text:#A9B7C4;
+  --skeleton:rgba(255,255,255,.07); --skeleton-shine:rgba(255,255,255,.09); --spinner-track:rgba(255,255,255,.12);
+  --progress-track:rgba(255,255,255,.08); --progress-fill:linear-gradient(90deg,#4A7DB5,#A9CDF3);
+  --phone-body:linear-gradient(160deg,#2A3542,#0D1319);
+
+  /* type */
+  --font-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Segoe UI Variable Display","Segoe UI",system-ui,Roboto,sans-serif;
+  --font-num:var(--font-display);
+  --font-num-table:var(--font-num);
+  --font-card-title:var(--font-ui);
+  --fw-display:700; --fw-num:700; --fw-strong:600; --fw-card-title:600; --fw-tab:600; --fw-btn:600;
+  --ls-body:-.005em; --ls-display:-.035em; --ls-hero:-.05em; --ls-num:-.02em; --ls-kpi:-.04em; --ls-card-title:-.01em; --ls-tab:0; --ls-btn:0;
+  --lh-display:1.05;
+  --fs-body:15px; --fs-lead:15.5px; --fs-hero:clamp(56px,8vw,88px); --fs-h2:30px; --fs-apptitle:18px; --fs-card-title:15px;
+  --fs-kpi:36px; --fs-btn:14.5px; --fs-modal-title:23px; --fs-empty-title:18px;
+  --label-size:12px; --label-weight:600; --label-spacing:.02em; --label-case:none;
+  --kpi-label:#A9B7C4; --kpi-label-size:13px; --kpi-label-weight:500; --kpi-label-spacing:0; --kpi-label-case:none;
+  --th-size:12.5px; --th-weight:600; --th-spacing:0; --th-case:none;
+  --field-label-size:13px; --field-label-weight:500; --field-label-spacing:0; --field-label-case:none;
+  --tab-case:none; --btn-case:none;
+
+  /* shape */
+  --bw:1px;
+  --r-card:26px; --r-inner:16px; --r-control:14px; --r-btn:999px; --r-chip:999px; --r-tabs:999px; --r-tab:999px; --r-tabbar:30px; --r-tabbar-in:24px;
+  --r-seg:999px; --r-seg-in:999px; --r-modal:30px; --r-toast:18px; --r-tip:12px; --r-icon:10px; --r-group:20px; --r-check:7px; --r-skel:8px; --r-empty-art:24px;
+  --btn-h:44px; --btn-h-sm:36px; --btn-pad:20px; --field-h:48px; --tabs-pad:5px;
+
+  /* depth */
+  --shadow-card:inset 0 1px 0 rgba(255,255,255,.17),inset 0 0 0 .5px rgba(255,255,255,.06),0 24px 60px -34px rgba(0,0,0,.85);
+  --shadow-pop:inset 0 1px 0 rgba(255,255,255,.12),0 30px 70px -24px rgba(0,0,0,.85);
+  --shadow-group:var(--shadow-card);
+  --shadow-icon:0 10px 24px -12px rgba(0,0,0,.8),inset 0 0 0 1px rgba(255,255,255,.1);
+  --backdrop:blur(26px) saturate(170%);
+
+  /* space */
+  --page-max:1180px; --page-pad:20px; --gap:14px; --pad-card:22px; --pad-modal:24px;
+  --section-gap:72px; --first-gap:26px; --head-gap:18px; --card-head-gap:16px; --group-gap:10px; --kpi-h:156px; --chart-h:230px;
+
+  /* motion: soft springs */
+  --ease:cubic-bezier(.2,.75,.25,1); --ease-spring:cubic-bezier(.22,1.3,.36,1); --glass-jelly:cubic-bezier(.18,1.75,.38,1);
+  --dur-fast:.15s; --dur:.25s; --dur-slow:.45s; --dur-chart:.9s; --press:.94;
+
+  /* dropdown menu */
+  --menu-bg:rgba(22,31,42,.94); --r-menu:18px; --r-menu-item:12px;
+  /* KPI sparkline: a point of ice-white light with a frosty tail and a short afterglow (the frost glint module adds the sparkle) */
+  --spark-trail:#C9DDF5; --spark-head:#FFFFFF; --spark-trail-len:.36; --spark-afterglow:.45; --spark-dur:1300; --spark-cool:1.4s;
+}
+
+/* EMBER · charcoal and live coals. Dark, fiery red-orange, punchy. */
+:root[data-theme="ember"]{
+  --color-scheme:dark;
+
+  /* colour: surfaces */
+  --bg:#0C0807;
+  --bg-image:radial-gradient(70% 45% at 50% 110%,rgba(255,84,26,.16),rgba(255,84,26,0) 70%),radial-gradient(50% 40% at 100% 0%,rgba(255,150,60,.06),rgba(255,150,60,0) 70%),linear-gradient(180deg,#130C0A,#0C0807 45%);
+  --surface:linear-gradient(180deg,#1C1412 0%,#161010 100%);
+  --surface-solid:#181110;
+  --surface-raised:linear-gradient(180deg,#241815,#191210);
+  --group-bg:var(--surface);
+  --border:rgba(255,120,72,.13);
+  --border-strong:rgba(255,130,80,.3);
+  --hairline:rgba(255,190,160,.07);
+  --neutral-soft:rgba(255,220,200,.07);
+  --row-hover:rgba(255,120,72,.06);
+
+  /* colour: text */
+  --text:#FFF4EE; --text-2:#D9BFB2; --text-3:#98796C; --text-4:#6A5249;
+  --eyebrow:#FF7A3D;
+
+  /* colour: accent and states */
+  --accent:#FF6A2B; --accent-text:#FFB38F; --accent-soft:rgba(255,106,43,.14);
+  --primary-bg:linear-gradient(180deg,#FF8E40 0%,#FF5A1F 55%,#E8401A 100%); --primary-text:#1E0A03;
+  --primary-shadow:inset 0 1px 0 rgba(255,225,190,.55),0 10px 28px -12px rgba(255,90,31,.75);
+  --secondary-bg:#251917; --secondary-text:#FFE9DF; --secondary-border:rgba(255,130,80,.22);
+  --btn-hover-overlay:rgba(255,200,160,.1);
+  --danger:#FF5A47; --danger-bg:linear-gradient(180deg,#EE3F26,#BF2414); --danger-on:#FFF3EF;
+  --danger-soft:rgba(255,80,56,.14); --danger-line:rgba(255,80,56,.4); --danger-shadow:0 10px 26px -14px rgba(232,56,30,.8);
+  --success:#A6DD7A; --success-soft:rgba(166,221,122,.13);
+  --warning:#FFB020; --warning-deep:#DD8A00; --warning-on:#221300; --warning-glow:rgba(255,176,32,.5);
+  --focus:#FF8A3D; --focus-ring:rgba(255,106,43,.24); --selection:rgba(255,106,43,.35);
+  --chip-on-bg:#FF6A2B; --chip-on-text:#1E0A03;
+
+  /* colour: charts */
+  --chart-1:#FF6A2B; --chart-2:#FFC24A; --chart-3:#E0301E; --chart-4:#FFE3CC; --chart-5:#B85A35;
+  --chart-grid:rgba(255,190,160,.07); --chart-axis:#98796C; --chart-area:.36; --chart-bar-r:4;
+  --tip-bg:#261A17; --tip-text:#FFF4EE;
+
+  /* colour: chrome */
+  --header-bg:linear-gradient(180deg,rgba(12,8,7,.94),rgba(12,8,7,.8)); --header-border:rgba(255,120,72,.12); --header-blur:blur(14px);
+  --tabs-bg:#160F0E; --tabs-border:rgba(255,120,72,.14); --tabs-shadow:inset 0 1px 0 rgba(255,200,170,.04);
+  --tab-text:#C4A698; --tab-active-text:#1E0A03; --tab-active-bg:linear-gradient(180deg,#FF8E40,#FF5A1F);
+  --tab-active-shadow:inset 0 1px 0 rgba(255,225,190,.5),0 6px 18px -6px rgba(255,90,31,.7);
+  --tabbar-bg:rgba(22,15,14,.95); --tabbar-shadow:inset 0 1px 0 rgba(255,140,90,.1),0 20px 40px -14px rgba(0,0,0,.9);
+  --tabbar-active-bg:linear-gradient(180deg,#FF8E40,#FF5A1F); --tabbar-active-shadow:0 6px 18px -6px rgba(255,90,31,.7); --tabbar-active-text:#1E0A03;
+  --seg-bg:#160F0E; --seg-active-bg:#FF6A2B; --seg-active-text:#1E0A03; --seg-active-shadow:0 4px 14px -4px rgba(255,90,31,.6);
+  --overlay:rgba(8,3,2,.64); --overlay-blur:blur(4px);
+  --toast-bg:#221714; --toast-text:#FFF4EE; --toast-action:#FF9A5C;
+
+  /* colour: fields and controls */
+  --field-bg:#140E0D; --field-bg-focus:#1A1210; --field-border:rgba(255,130,80,.16); --field-border-hover:rgba(255,130,80,.32);
+  --field-shadow:inset 0 1px 2px rgba(0,0,0,.4); --field-label:#D9BFB2; --picker-filter:invert(.85) sepia(.6) saturate(3) hue-rotate(-25deg);
+  --switch-off:#2E201D; --switch-on:#FF6A2B; --switch-knob:#FFF4EE; --switch-knob-shadow:0 2px 6px rgba(0,0,0,.5); --check-mark:#1E0A03;
+  --table-bg:#120C0B; --table-border:rgba(255,120,72,.12); --table-head-bg:#1A1210; --th-text:#B39385;
+  --skeleton:#231816; --skeleton-shine:rgba(255,140,90,.1); --spinner-track:rgba(255,130,80,.16);
+  --progress-track:#231816; --progress-fill:linear-gradient(90deg,#E8401A,#FF8A3D,#FFC24A);
+  --phone-body:linear-gradient(160deg,#3A2622,#120B09);
+
+  /* type */
+  --font-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:"Space Grotesk","SF Pro Display","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
+  --font-num:"Space Grotesk","SF Pro Display","Segoe UI",system-ui,sans-serif;
+  --font-num-table:var(--font-num);
+  --font-card-title:var(--font-display);
+  --fw-display:700; --fw-num:700; --fw-strong:600; --fw-card-title:600; --fw-tab:700; --fw-btn:700;
+  --ls-body:0; --ls-display:-.03em; --ls-hero:-.05em; --ls-num:-.02em; --ls-kpi:-.035em; --ls-card-title:-.01em; --ls-tab:.01em; --ls-btn:.01em;
+  --lh-display:1;
+  --fs-body:15px; --fs-lead:15.5px; --fs-hero:clamp(60px,9.5vw,104px); --fs-h2:32px; --fs-apptitle:18px; --fs-card-title:15.5px;
+  --fs-kpi:38px; --fs-btn:14.5px; --fs-modal-title:24px; --fs-empty-title:19px;
+  --label-size:11.5px; --label-weight:700; --label-spacing:.14em; --label-case:uppercase;
+  --kpi-label:#D9BFB2; --kpi-label-size:11.5px; --kpi-label-weight:700; --kpi-label-spacing:.12em; --kpi-label-case:uppercase;
+  --th-size:11px; --th-weight:700; --th-spacing:.1em; --th-case:uppercase;
+  --field-label-size:13px; --field-label-weight:600; --field-label-spacing:0; --field-label-case:none;
+  --tab-case:none; --btn-case:none;
+
+  /* shape: tighter, squarer corners */
+  --bw:1px;
+  --r-card:18px; --r-inner:12px; --r-control:11px; --r-btn:12px; --r-chip:8px; --r-tabs:14px; --r-tab:10px; --r-tabbar:20px; --r-tabbar-in:14px;
+  --r-seg:12px; --r-seg-in:9px; --r-modal:22px; --r-toast:14px; --r-tip:10px; --r-icon:10px; --r-group:14px; --r-check:5px; --r-skel:6px; --r-empty-art:18px;
+  --btn-h:44px; --btn-h-sm:36px; --btn-pad:20px; --field-h:48px; --tabs-pad:4px;
+
+  /* depth */
+  --shadow-card:inset 0 1px 0 rgba(255,200,170,.06),0 1px 0 rgba(0,0,0,.4),0 24px 50px -30px rgba(0,0,0,.9);
+  --shadow-pop:0 0 0 1px rgba(255,120,72,.12),0 30px 70px -20px rgba(0,0,0,.9),0 0 70px -30px rgba(255,90,31,.45);
+  --shadow-group:var(--shadow-card);
+  --shadow-icon:0 10px 26px -10px rgba(255,90,31,.5),inset 0 0 0 1px rgba(255,160,110,.18);
+  --backdrop:none;
+
+  /* space */
+  --page-max:1180px; --page-pad:20px; --gap:14px; --pad-card:22px; --pad-modal:24px;
+  --section-gap:76px; --first-gap:26px; --head-gap:18px; --card-head-gap:16px; --group-gap:8px; --kpi-h:156px; --chart-h:230px;
+
+  /* motion: quick, with overshoot */
+  --ease:cubic-bezier(.2,.8,.2,1); --ease-spring:cubic-bezier(.3,1.55,.45,1);
+  --dur-fast:.12s; --dur:.2s; --dur-slow:.38s; --dur-chart:.7s; --press:.93;
+
+  /* dropdown menu */
+  --menu-bg:#1F1513; --r-menu:16px; --r-menu-item:10px;
+  /* KPI sparkline: a slow fuse. The line burns in gold behind a hot spark, then cools to orange */
+  --spark-trail:#FFC24A; --spark-head:#FFF3D6; --spark-trail-len:.5; --spark-afterglow:.9; --spark-dur:1600; --spark-cool:1.8s;
+}
+
+/* PRISM · a crystal object on a pearl wall. One light source for the whole interface: every panel
+   catches it, splits it into colour and throws it back. Light, airy, iridescent. */
+:root[data-theme="prism"]{
+  --color-scheme:light;
+
+  /* colour: surfaces (frosted crystal over pearl) */
+  --bg:#F2F2F7;
+  --bg-image:radial-gradient(120% 80% at 8% -12%,#FFFFFF 0%,rgba(255,255,255,0) 55%),radial-gradient(90% 70% at 100% 112%,#E8E4FF 0%,rgba(232,228,255,0) 62%),linear-gradient(180deg,#F7F7FB,#EEEEF5);
+  --surface:linear-gradient(180deg,rgba(255,255,255,.78),rgba(255,255,255,.6));
+  --surface-solid:#FFFFFF;
+  --surface-raised:rgba(255,255,255,.9);
+  --group-bg:rgba(255,255,255,.7);
+  --border:rgba(20,22,40,.08);
+  --border-strong:rgba(20,22,40,.16);
+  --hairline:rgba(20,22,40,.06);
+  --neutral-soft:rgba(20,22,40,.05);
+  --row-hover:rgba(91,72,245,.045);
+
+  /* colour: text */
+  --text:#12131C; --text-2:#4D5064; --text-3:#80839A; --text-4:#B2B4C4;
+  --eyebrow:#5B48F5;
+
+  /* colour: accent and states */
+  --accent:#5B48F5; --accent-text:#4A37E8; --accent-soft:rgba(91,72,245,.09);
+  --primary-bg:linear-gradient(115deg,#DAD3FF 0%,#C3EBFF 32%,#CDFBE8 58%,#FFE8C9 82%,#FFD7EC 100%); --primary-text:#12131C;
+  --primary-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 1px rgba(91,72,245,.16),0 10px 24px -12px rgba(91,72,245,.5);
+  --secondary-bg:rgba(255,255,255,.82); --secondary-text:#12131C; --secondary-border:rgba(20,22,40,.12);
+  --btn-hover-overlay:rgba(255,255,255,.38);
+  --danger:#DC2B55; --danger-bg:linear-gradient(180deg,#F2456B,#D41F4A); --danger-on:#FFFFFF;
+  --danger-soft:rgba(220,43,85,.08); --danger-line:rgba(220,43,85,.3); --danger-shadow:0 10px 22px -12px rgba(220,43,85,.55);
+  --success:#0B9C79; --success-soft:rgba(11,156,121,.1);
+  --warning:#F2A100; --warning-deep:#D48A00; --warning-on:#241700; --warning-glow:rgba(242,161,0,.35);
+  --focus:#5B48F5; --focus-ring:rgba(91,72,245,.16); --selection:rgba(91,72,245,.18);
+  --chip-on-bg:#12131C; --chip-on-text:#FFFFFF;
+
+  /* colour: charts (the spectrum) */
+  --chart-1:#5B48F5; --chart-2:#16B2E3; --chart-3:#FF5C8A; --chart-4:#1FC796; --chart-5:#FFAA2E;
+  --chart-grid:rgba(20,22,40,.06); --chart-axis:#9396A8; --chart-area:.16; --chart-bar-r:8;
+  --tip-bg:rgba(18,19,28,.92); --tip-text:#FFFFFF;
+
+  /* colour: chrome */
+  --header-bg:rgba(244,244,249,.7); --header-border:rgba(20,22,40,.06); --header-blur:blur(22px) saturate(180%);
+  --tabs-bg:rgba(255,255,255,.55); --tabs-border:rgba(20,22,40,.07); --tabs-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+  --tab-text:#6B6E82; --tab-active-text:#12131C; --tab-active-bg:#FFFFFF;
+  --tab-active-shadow:0 1px 2px rgba(20,22,40,.08),0 6px 16px -8px rgba(91,72,245,.4),inset 0 0 0 1px rgba(91,72,245,.12);
+  --tabbar-bg:rgba(255,255,255,.78); --tabbar-shadow:0 0 0 1px rgba(20,22,40,.06),0 20px 40px -18px rgba(50,40,120,.35);
+  --tabbar-active-bg:#FFFFFF; --tabbar-active-shadow:0 1px 2px rgba(20,22,40,.08),0 6px 16px -8px rgba(91,72,245,.4); --tabbar-active-text:#12131C;
+  --seg-bg:rgba(20,22,40,.05); --seg-active-bg:#FFFFFF; --seg-active-text:#12131C; --seg-active-shadow:0 1px 2px rgba(20,22,40,.08),0 4px 12px -6px rgba(91,72,245,.35);
+  --overlay:rgba(236,236,246,.45); --overlay-blur:blur(14px) saturate(140%);
+  --toast-bg:rgba(255,255,255,.9); --toast-text:#12131C; --toast-action:#4A37E8;
+  --menu-bg:rgba(255,255,255,.94); --r-menu:20px; --r-menu-item:12px;
+
+  /* colour: fields and controls */
+  --field-bg:rgba(255,255,255,.78); --field-bg-focus:#FFFFFF; --field-border:rgba(20,22,40,.12); --field-border-hover:rgba(20,22,40,.22);
+  --field-shadow:inset 0 1px 2px rgba(20,22,40,.04); --field-label:#4D5064; --picker-filter:none;
+  --switch-off:rgba(20,22,40,.13); --switch-on:#5B48F5; --switch-knob:#FFFFFF; --switch-knob-shadow:0 2px 6px rgba(20,22,40,.2); --check-mark:#FFFFFF;
+  --table-bg:rgba(255,255,255,.5); --table-border:rgba(20,22,40,.07); --table-head-bg:rgba(248,248,252,.94); --th-text:#80839A;
+  --skeleton:rgba(20,22,40,.06); --skeleton-shine:rgba(255,255,255,.9); --spinner-track:rgba(20,22,40,.1);
+  --progress-track:rgba(20,22,40,.07); --progress-fill:linear-gradient(90deg,#5B48F5,#16B2E3,#1FC796);
+  --phone-body:linear-gradient(160deg,#2A2B36,#0E0F15);
+
+  /* KPI sparkline: a violet line drawn by a point of cyan light */
+  --spark-trail:#16B2E3; --spark-head:#FFFFFF; --spark-trail-len:.32; --spark-afterglow:0; --spark-dur:1150; --spark-cool:.6s;
+
+  /* type: a wide geometric display face, quiet system text */
+  --font-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:"Unbounded","SF Pro Display","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
+  --font-num:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
+  --font-num-table:var(--font-ui);
+  --font-card-title:var(--font-ui);
+  --fw-display:600; --fw-num:600; --fw-strong:600; --fw-card-title:600; --fw-tab:600; --fw-btn:600;
+  --ls-body:-.005em; --ls-display:-.025em; --ls-hero:-.05em; --ls-num:-.02em; --ls-kpi:-.035em; --ls-card-title:-.01em; --ls-tab:0; --ls-btn:0;
+  --lh-display:1.08;
+  --fs-body:15px; --fs-lead:15.5px; --fs-hero:clamp(60px,10vw,124px); --fs-h2:29px; --fs-apptitle:16.5px; --fs-card-title:15px;
+  --fs-kpi:38px; --fs-btn:14.5px; --fs-modal-title:21px; --fs-empty-title:17px;
+  --label-size:11px; --label-weight:700; --label-spacing:.14em; --label-case:uppercase;
+  --kpi-label:#6B6E82; --kpi-label-size:13px; --kpi-label-weight:500; --kpi-label-spacing:0; --kpi-label-case:none;
+  --th-size:11px; --th-weight:600; --th-spacing:.08em; --th-case:uppercase;
+  --field-label-size:12.5px; --field-label-weight:600; --field-label-spacing:0; --field-label-case:none;
+  --tab-case:none; --btn-case:none;
+
+  /* shape: soft, generous radii */
+  --bw:1px;
+  --r-card:24px; --r-inner:14px; --r-control:14px; --r-btn:999px; --r-chip:999px; --r-tabs:999px; --r-tab:999px; --r-tabbar:28px; --r-tabbar-in:22px;
+  --r-seg:999px; --r-seg-in:999px; --r-modal:28px; --r-toast:18px; --r-tip:10px; --r-icon:11px; --r-group:18px; --r-check:6px; --r-skel:8px; --r-empty-art:22px;
+  --btn-h:44px; --btn-h-sm:36px; --btn-pad:20px; --field-h:48px; --tabs-pad:4px;
+
+  /* depth: violet-tinted, airy */
+  --shadow-card:inset 0 1px 0 rgba(255,255,255,.95),0 1px 2px rgba(20,22,40,.04),0 24px 50px -30px rgba(50,40,120,.28);
+  --shadow-pop:0 0 0 1px rgba(20,22,40,.06),0 30px 70px -24px rgba(50,40,120,.38);
+  --shadow-group:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(20,22,40,.04);
+  --shadow-icon:0 10px 24px -10px rgba(91,72,245,.45),inset 0 0 0 1px rgba(20,22,40,.06);
+  --backdrop:blur(24px) saturate(180%);
+
+  /* space */
+  --page-max:1180px; --page-pad:20px; --gap:16px; --pad-card:24px; --pad-modal:26px;
+  --section-gap:84px; --first-gap:28px; --head-gap:20px; --card-head-gap:16px; --group-gap:10px; --kpi-h:160px; --chart-h:236px;
+
+  /* motion: smooth with a light spring */
+  --ease:cubic-bezier(.2,.8,.2,1); --ease-spring:cubic-bezier(.25,1.25,.4,1);
+  --dur-fast:.15s; --dur:.26s; --dur-slow:.5s; --dur-chart:.95s; --press:.965;
+}
+</style>

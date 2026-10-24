@@ -1,8 +1,23 @@
 <script id="ui">
+/* App icons · FINAL 24.10.2026. One fixed icon per app (it does not change with the look).
+   The series: pearl tile, one indigo crystal shape (light/dark facets), the spectral sun, one glint.
+   Source of truth: APPS/01 DESIGN LAB/03 App icons FINAL/<APP>/icon.svg. Each function takes a unique id prefix
+   (gradients must not clash when an icon is drawn twice on a page). */
+const APP_ICONS = {
+  /* EVEN · accounting: P&L waterfall (revenue, costs, the result bar in indigo) with the sun. */
+  even(u){ return "<svg viewBox=\"0 0 100 100\" aria-hidden=\"true\"><defs><linearGradient id=\"__U__pb\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#E4E0F7\"/></linearGradient><radialGradient id=\"__U__pg\" cx=\".15\" cy=\".05\" r=\".8\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#FFFFFF\" stop-opacity=\"0\"/></radialGradient><filter id=\"__U__sh\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\"><feGaussianBlur stdDeviation=\"4\"/></filter><linearGradient id=\"__U__cl\" x1=\"0\" y1=\"0\" x2=\".4\" y2=\"1\"><stop offset=\"0\" stop-color=\"#FFF1DC\"/><stop offset=\".45\" stop-color=\"#F1E6FF\"/><stop offset=\"1\" stop-color=\"#D3CAFF\"/></linearGradient><linearGradient id=\"__U__hero\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8A7BFF\"/><stop offset=\"1\" stop-color=\"#2E1FB8\"/></linearGradient><linearGradient id=\"__U__sp\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient><linearGradient id=\"__U__sh2\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient><linearGradient id=\"__U__sr\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient><radialGradient id=\"__U__sun\" cx=\".4\" cy=\".35\" r=\".7\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#FFF1DC\"/></radialGradient><linearGradient id=\"__U__t0\" gradientUnits=\"userSpaceOnUse\" x1=\"19\" y1=\"0\" x2=\"31\" y2=\"0\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient><linearGradient id=\"__U__t1\" gradientUnits=\"userSpaceOnUse\" x1=\"44\" y1=\"0\" x2=\"56\" y2=\"0\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient><linearGradient id=\"__U__hv\" gradientUnits=\"userSpaceOnUse\" x1=\"0\" y1=\"75\" x2=\"0\" y2=\"50\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient><linearGradient id=\"__U__bl\" gradientUnits=\"userSpaceOnUse\" x1=\"15\" y1=\"0\" x2=\"85\" y2=\"0\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient></defs><rect width=\"100\" height=\"100\" fill=\"url(#__U__pb)\"/><rect width=\"100\" height=\"100\" fill=\"url(#__U__pg)\"/><circle cx=\"76\" cy=\"27\" r=\"8.5\" fill=\"url(#__U__sun)\"/><circle cx=\"76\" cy=\"27\" r=\"8.5\" fill=\"none\" stroke=\"url(#__U__sr)\" stroke-width=\"1.5\"/><path d=\"M34.8 20H40.2\" stroke=\"#5B48F5\" stroke-opacity=\".4\" stroke-width=\"1.2\" stroke-dasharray=\"1.8 1.4\"/><path d=\"M59.8 47H65.2\" stroke=\"#5B48F5\" stroke-opacity=\".4\" stroke-width=\"1.2\" stroke-dasharray=\"1.8 1.4\"/><rect x=\"16\" y=\"20\" width=\"18\" height=\"58\" rx=\"3.2\" fill=\"url(#__U__cl)\" stroke=\"#5B48F5\" stroke-opacity=\".3\" stroke-width=\"1\"/><rect x=\"41\" y=\"20\" width=\"18\" height=\"27\" rx=\"3.2\" fill=\"url(#__U__cl)\" stroke=\"#5B48F5\" stroke-opacity=\".3\" stroke-width=\"1\"/><rect x=\"66\" y=\"50\" width=\"18\" height=\"31\" rx=\"4\" fill=\"#3A28C9\" opacity=\".35\" filter=\"url(#__U__sh)\"/><rect x=\"66\" y=\"47\" width=\"18\" height=\"31\" rx=\"3.2\" fill=\"url(#__U__hero)\"/><path d=\"M15 81.5h70\" stroke=\"#5B48F5\" stroke-opacity=\".3\" stroke-width=\"1.1\" stroke-linecap=\"round\"/><path d=\"M67 43.3 Q67.315 47.185 71.2 47.5 Q67.315 47.815 67 51.7 Q66.685 47.815 62.8 47.5 Q66.685 47.185 67 43.3Z\" fill=\"#FFFFFF\"/></svg>".replace(/__U__/g, u); },
+  /* CICO · calories: progress ring with a crystal flame inside. */
+  cico(u){ return "<svg viewBox=\"0 0 100 100\" aria-hidden=\"true\"><defs><linearGradient id=\"__U__pb\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#E4E0F7\"/></linearGradient><radialGradient id=\"__U__pg\" cx=\".15\" cy=\".05\" r=\".8\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#FFFFFF\" stop-opacity=\"0\"/></radialGradient><filter id=\"__U__sh\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\"><feGaussianBlur stdDeviation=\"4\"/></filter><linearGradient id=\"__U__al\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8A7BFF\"/><stop offset=\"1\" stop-color=\"#5B48F5\"/></linearGradient><linearGradient id=\"__U__ar\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#4632E6\"/><stop offset=\"1\" stop-color=\"#2416A0\"/></linearGradient><linearGradient id=\"__U__cl\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#EAE6FF\"/></linearGradient><linearGradient id=\"__U__cr\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#D4CCFF\"/><stop offset=\"1\" stop-color=\"#B2A5FF\"/></linearGradient><linearGradient id=\"__U__sp\" x1=\"0\" y1=\"1\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient><linearGradient id=\"__U__sr\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient><radialGradient id=\"__U__sun\" cx=\".4\" cy=\".35\" r=\".7\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#FFF1DC\"/></radialGradient><linearGradient id=\"__U__ring\" x1=\"1\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8A7BFF\"/><stop offset=\"1\" stop-color=\"#2E1FB8\"/></linearGradient><filter id=\"__U__hb\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\"><feGaussianBlur stdDeviation=\"2.4\"/></filter></defs><rect width=\"100\" height=\"100\" fill=\"url(#__U__pb)\"/><rect width=\"100\" height=\"100\" fill=\"url(#__U__pg)\"/><circle cx=\"50\" cy=\"51\" r=\"29\" fill=\"none\" stroke=\"#D9D2FF\" stroke-width=\"9\"/><circle cx=\"50\" cy=\"51\" r=\"29\" fill=\"none\" stroke=\"#5B48F5\" stroke-opacity=\".25\" stroke-width=\"1\" /><path d=\"M64.50 25.89 A29 29 0 1 1 40.08 23.75\" fill=\"none\" stroke=\"#3A28C9\" stroke-opacity=\".35\" stroke-width=\"9\" stroke-linecap=\"round\" transform=\"translate(0 3)\" filter=\"url(#__U__hb)\"/><path d=\"M64.50 25.89 A29 29 0 1 1 40.08 23.75\" fill=\"none\" stroke=\"url(#__U__ring)\" stroke-width=\"9\" stroke-linecap=\"round\"/><path d=\"M35.50 76.11\" /><path d=\"M16.91 45.17 A33.6 33.6 0 0 1 44.17 17.91\" fill=\"none\" stroke=\"url(#__U__sp)\" stroke-width=\"1.2\" stroke-linecap=\"round\"/><polygon points=\"52.5,34.0 57.5,42.5 60.0,52.0 58.0,61.5 50.5,69.0 42.5,63.0 40.0,54.5 41.5,46.5 44.0,41.5 46.5,48.5\" fill=\"#3A28C9\" opacity=\".35\" transform=\"translate(0 2.5)\" filter=\"url(#__U__sh)\"/><polygon points=\"52.5,34.0 50.0,52.0 50.5,69.0 42.5,63.0 40.0,54.5 41.5,46.5 44.0,41.5 46.5,48.5\" fill=\"url(#__U__al)\"/><polygon points=\"52.5,34.0 57.5,42.5 60.0,52.0 58.0,61.5 50.5,69.0 50.0,52.0\" fill=\"url(#__U__ar)\"/><polygon points=\"50.5,52.0 54.0,58.0 53.5,63.5 50.5,66.5 47.0,63.5 46.5,58.0\" fill=\"url(#__U__cl)\"/><polygon points=\"50.5,52.0 54.0,58.0 53.5,63.5 50.5,66.5\" fill=\"url(#__U__cr)\"/><path d=\"M41.60 47.25L43.80 42.30\" stroke=\"url(#__U__sp)\" stroke-width=\"0.84\" stroke-linecap=\"round\"/><path d=\"M64.5 21.26526329025128 Q64.8465 25.538763290251282 69.12 25.88526329025128 Q64.8465 26.23176329025128 64.5 30.505263290251282 Q64.1535 26.23176329025128 59.879999999999995 25.88526329025128 Q64.1535 25.538763290251282 64.5 21.26526329025128Z\" fill=\"#FFFFFF\"/></svg>".replace(/__U__/g, u); },
+  /* RISE · training + journal: crystal chevrons rising toward the sun. */
+  rise(u){ return "<svg viewBox=\"0 0 100 100\" aria-hidden=\"true\"><defs><linearGradient id=\"__U__pb\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#E4E0F7\"/></linearGradient><radialGradient id=\"__U__pg\" cx=\".15\" cy=\".05\" r=\".8\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#FFFFFF\" stop-opacity=\"0\"/></radialGradient><filter id=\"__U__sh\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\"><feGaussianBlur stdDeviation=\"4\"/></filter><linearGradient id=\"__U__al\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8A7BFF\"/><stop offset=\"1\" stop-color=\"#5B48F5\"/></linearGradient><linearGradient id=\"__U__ar\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#4632E6\"/><stop offset=\"1\" stop-color=\"#2416A0\"/></linearGradient><linearGradient id=\"__U__cl\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#EAE6FF\"/></linearGradient><linearGradient id=\"__U__cr\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#D4CCFF\"/><stop offset=\"1\" stop-color=\"#B2A5FF\"/></linearGradient><linearGradient id=\"__U__sp\" x1=\"0\" y1=\"1\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient><linearGradient id=\"__U__sr\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient><radialGradient id=\"__U__sun\" cx=\".4\" cy=\".35\" r=\".7\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#FFF1DC\"/></radialGradient><filter id=\"__U__hb\" x=\"-100%\" y=\"-100%\" width=\"300%\" height=\"300%\"><feGaussianBlur stdDeviation=\"2\"/></filter></defs><rect width=\"100\" height=\"100\" fill=\"url(#__U__pb)\"/><rect width=\"100\" height=\"100\" fill=\"url(#__U__pg)\"/><circle cx=\"74\" cy=\"25\" r=\"8.5\" fill=\"url(#__U__sun)\"/><circle cx=\"74\" cy=\"25\" r=\"8.5\" fill=\"none\" stroke=\"url(#__U__sr)\" stroke-width=\"1.5\"/><polygon points=\"48,46 75,73 66,82 48,64 30,82 21,73\" fill=\"#5B48F5\" opacity=\".18\" transform=\"translate(0 4)\" filter=\"url(#__U__sh)\"/><polygon points=\"48,25 75,52 66,61 48,43 30,61 21,52\" fill=\"#3A28C9\" opacity=\".35\" transform=\"translate(0 5)\" filter=\"url(#__U__sh)\"/><polygon points=\"48,46 48,64 30,82 21,73\" fill=\"url(#__U__cl)\"/><polygon points=\"48,46 75,73 66,82 48,64\" fill=\"url(#__U__cr)\"/><polygon points=\"48,46 75,73 66,82 48,64 30,82 21,73\" fill=\"none\" stroke=\"#5B48F5\" stroke-opacity=\".35\" stroke-width=\"1\" stroke-linejoin=\"round\"/><polygon points=\"48,25 48,43 30,61 21,52\" fill=\"url(#__U__al)\"/><polygon points=\"48,25 75,52 66,61 48,43\" fill=\"url(#__U__ar)\"/><path d=\"M21.8 51.2L47.2 25.8\" stroke=\"url(#__U__sp)\" stroke-width=\"1.2\" stroke-linecap=\"round\"/><path d=\"M27 52.5L46.5 33\" stroke=\"#FFFFFF\" stroke-opacity=\".55\" stroke-width=\"1.1\" stroke-linecap=\"round\"/><path d=\"M48 20.67 Q48.36225 25.13775 52.83 25.5 Q48.36225 25.86225 48 30.33 Q47.63775 25.86225 43.17 25.5 Q47.63775 25.13775 48 20.67Z\" fill=\"#FFFFFF\"/></svg>".replace(/__U__/g, u); },
+  /* EBIT · exam learning: crystal peak with the sun. */
+  ebit(u){ return "<svg viewBox=\"0 0 100 100\" aria-hidden=\"true\"><defs><linearGradient id=\"__U__pb\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#E4E0F7\"/></linearGradient><radialGradient id=\"__U__pg\" cx=\".15\" cy=\".05\" r=\".8\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#FFFFFF\" stop-opacity=\"0\"/></radialGradient><filter id=\"__U__sh\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\"><feGaussianBlur stdDeviation=\"4\"/></filter><linearGradient id=\"__U__al\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8A7BFF\"/><stop offset=\"1\" stop-color=\"#5B48F5\"/></linearGradient><linearGradient id=\"__U__ar\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#4632E6\"/><stop offset=\"1\" stop-color=\"#2416A0\"/></linearGradient><linearGradient id=\"__U__cl\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#E6E1FF\"/></linearGradient><linearGradient id=\"__U__cr\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#CFC6FF\"/><stop offset=\"1\" stop-color=\"#AEA1FF\"/></linearGradient><linearGradient id=\"__U__sp\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient><radialGradient id=\"__U__sun\" cx=\".4\" cy=\".35\" r=\".7\"><stop offset=\"0\" stop-color=\"#FFFFFF\"/><stop offset=\"1\" stop-color=\"#FFF1DC\"/></radialGradient><linearGradient id=\"__U__spE\" gradientUnits=\"userSpaceOnUse\" x1=\"27.2\" y1=\"73.6\" x2=\"53.4\" y2=\"26.2\"><stop offset=\"0\" stop-color=\"#16B2E3\"/><stop offset=\".35\" stop-color=\"#1FC796\"/><stop offset=\".65\" stop-color=\"#FFAA2E\"/><stop offset=\"1\" stop-color=\"#FF5C8A\"/></linearGradient></defs><rect width=\"100\" height=\"100\" fill=\"url(#__U__pb)\"/><rect width=\"100\" height=\"100\" fill=\"url(#__U__pg)\"/><g transform=\"translate(-3 0)\"><circle cx=\"70\" cy=\"33\" r=\"10\" fill=\"url(#__U__sun)\"/><circle cx=\"70\" cy=\"33\" r=\"10\" fill=\"none\" stroke=\"url(#__U__sp)\" stroke-width=\"1.6\"/><ellipse cx=\"50\" cy=\"78\" rx=\"30\" ry=\"4\" fill=\"#3A28C9\" opacity=\".25\" filter=\"url(#__U__sh)\"/><polygon points=\"54,25 82,75 26,75\" fill=\"url(#__U__al)\"/><polygon points=\"54,25 82,75 59,75\" fill=\"url(#__U__ar)\"/><path d=\"M53.4 26.2L27.2 73.6\" stroke=\"url(#__U__spE)\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><path d=\"M51.5 34L36 62\" stroke=\"#FFFFFF\" stroke-opacity=\".5\" stroke-width=\"1.1\" stroke-linecap=\"round\"/><path d=\"M14 75.5h72\" stroke=\"#5B48F5\" stroke-opacity=\".35\" stroke-width=\"1.2\" stroke-linecap=\"round\"/><path d=\"M54 20.88 Q54.3465 25.1535 58.620000000000005 25.5 Q54.3465 25.8465 54 30.12 Q53.6535 25.8465 49.379999999999995 25.5 Q53.6535 25.1535 54 20.88Z\" fill=\"#FFFFFF\"/></g></svg>".replace(/__U__/g, u); }
+};
+
 (function(){
 "use strict";
 const E = ENGINE;
-const $  = s => document.querySelector(s);
+const $  = (s, r) => (r || document).querySelector(s);
 const $$ = s => Array.prototype.slice.call(document.querySelectorAll(s));
 
 /* ---------- Zustand -------------------------------------------------- */
@@ -12,6 +27,8 @@ let vgl = null;                                   // {state, name} – Vergleich
 const verlauf = {zurueck:[], vor:[]};
 const FSA = !!(window.showOpenFilePicker && window.showSaveFilePicker);
 const BEWEGUNG = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+/* a token of the current look, read at draw time (charts drawn by code follow the theme) */
+const tk = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
 /* ---------- Symbole -------------------------------------------------- */
 const ICONS = {
@@ -58,74 +75,8 @@ function klon(o){ return JSON.parse(JSON.stringify(o)); }
 function kontenSortiert(){ return E.konten(state).sort((a,b)=>a.nr.localeCompare(b.nr,"de",{numeric:true})); }
 function kontoName(nr){ const k = ix && ix.km[nr]; return k ? k.name : "unknown account"; }
 
-/* ---------- Hintergrund: Guilloché ----------------------------------- */
-function rosette(g, cx, cy, R, ringe, k, amp, alpha){
-  g.strokeStyle = "rgba(150,190,235,"+alpha+")"; g.lineWidth = .7;
-  const N = 540;
-  for(let j=0; j<ringe; j++){
-    const rho = R*.22 + j*(R*.78/ringe), ph = j*.22;
-    g.beginPath();
-    for(let i=0; i<=N; i++){
-      const t = i/N*Math.PI*2, r = rho + amp*Math.sin(k*t + ph);
-      const x = cx + r*Math.cos(t), y = cy + r*Math.sin(t);
-      i ? g.lineTo(x,y) : g.moveTo(x,y);
-    }
-    g.stroke();
-  }
-}
-function wellen(g, w, h, n, f1, f2, A, B, alpha, phase){
-  g.strokeStyle = "rgba(150,190,235,"+alpha+")"; g.lineWidth = .6;
-  for(let i=0; i<n; i++){
-    const y0 = h*.08 + i*(h*.88/n);
-    g.beginPath();
-    for(let x=0; x<=w; x+=3){
-      const y = y0 + A*Math.sin(x*f1 + i*.35 + phase) + B*Math.sin(x*f2 - i*.2);
-      x ? g.lineTo(x,y) : g.moveTo(x,y);
-    }
-    g.stroke();
-  }
-}
-function zeichneHintergrund(){
-  const dpr = Math.min(window.devicePixelRatio||1, 2);
-  const schmal = window.innerWidth < 700;
-  [["fx-a",(g,w,h)=>{
-     const R = Math.min(w,h)*.46;
-     rosette(g, w*.80, h*.24, R, schmal?34:56, 18, R*.045, .085);
-     rosette(g, w*.10, h*.88, R*.7, schmal?24:40, 24, R*.03, .07);
-     wellen(g, w, h, schmal?40:70, .006, .017, 14, 6, .05, 0);
-   }],
-   ["fx-b",(g,w,h)=>{
-     wellen(g, w, h, schmal?40:70, .0063, .0175, 14, 6, .045, .9);
-     const R = Math.min(w,h)*.46;
-     rosette(g, w*.80, h*.24, R*.98, schmal?10:18, 36, R*.02, .05);
-   }]].forEach(([id, fn])=>{
-    const c = document.getElementById(id); if(!c || !c.getContext) return;
-    const w = c.clientWidth, h = c.clientHeight; if(!w || !h) return;
-    c.width = Math.round(w*dpr); c.height = Math.round(h*dpr);
-    const g = c.getContext("2d"); if(!g) return;
-    g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
-    try{ fn(g, w, h); }catch(e){ /* Hintergrund ist Zierde, nie ein Grund zum Abbruch */ }
-  });
-}
-(function parallaxe(){
-  const fein = window.matchMedia && window.matchMedia("(hover:hover) and (pointer:fine)").matches;
-  if(!fein || !BEWEGUNG) return;
-  const a = document.getElementById("fx-a"), b = document.getElementById("fx-b"), licht = document.getElementById("licht");
-  let zx=0, zy=0, x=0, y=0, laeuft=false;
-  function schritt(){
-    x += (zx-x)*.06; y += (zy-y)*.06;
-    a.style.transform = `translate3d(${(-x*14).toFixed(2)}px,${(-y*10).toFixed(2)}px,0)`;
-    b.style.transform = `translate3d(${(-x*28).toFixed(2)}px,${(-y*19).toFixed(2)}px,0)`;
-    if(Math.abs(zx-x) > .001 || Math.abs(zy-y) > .001) requestAnimationFrame(schritt); else laeuft = false;
-  }
-  window.addEventListener("pointermove", e=>{
-    zx = e.clientX/window.innerWidth - .5; zy = e.clientY/window.innerHeight - .5;
-    licht.style.setProperty("--lx", e.clientX+"px"); licht.style.setProperty("--ly", e.clientY+"px");
-    if(!laeuft){ laeuft = true; requestAnimationFrame(schritt); }
-  }, {passive:true});
-})();
-let hgTimer = null;
-window.addEventListener("resize", ()=>{ clearTimeout(hgTimer); hgTimer = setTimeout(zeichneHintergrund, 180); });
+/* ---------- Hintergrund: the look's ambient element (Design Lab) ---------- */
+function zeichneHintergrund(){}
 
 function rosettenPfad(cx, cy, rho, amp, k, ph){
   let d = ""; const N = 360;
@@ -144,12 +95,12 @@ function baueMarkeUndSiegel(){
       <rect x="36" y="40" width="28" height="6.5" rx="3.25" fill="#fff"/><rect x="36" y="53.5" width="28" height="6.5" rx="3.25" fill="#fff"/>`; }
   const s = $("#siegel");
   if(s){ let p = ""; for(let j=0;j<6;j++) p += `<path d="${rosettenPfad(100,100,72+j*3.6,3,36,j*.5)}"/>`;
-    s.innerHTML = `<defs><linearGradient id="sf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4A7DB5"/><stop offset=".5" stop-color="#8E7BD6"/><stop offset="1" stop-color="#D4A93A"/></linearGradient></defs>
-      <circle cx="100" cy="100" r="96" fill="rgba(247,249,247,.92)"/>
-      <g fill="none" stroke="url(#sf)" stroke-width="1">${p}</g>
-      <circle cx="100" cy="100" r="62" fill="#F7F9FC" stroke="#2F5E91" stroke-width="1.5"/>
-      <path d="M84 92l11 11 22-24" fill="none" stroke="#1F3F66" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-      <text x="100" y="128" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#1F3F66" letter-spacing="1">Booked</text>`; }
+    s.innerHTML = `<defs><linearGradient id="sf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--seal-ring-1)"/><stop offset=".5" style="stop-color:var(--seal-ring-2)"/><stop offset="1" style="stop-color:var(--seal-ring-1)"/></linearGradient></defs>
+      <circle cx="100" cy="100" r="96" style="fill:var(--seal-bg)"/>
+      <g class="ring" fill="none" stroke="url(#sf)" stroke-width="1">${p}</g>
+      <circle cx="100" cy="100" r="62" style="fill:var(--seal-face);stroke:var(--seal-ring-1)" stroke-width="1.5"/>
+      <path d="M84 92l11 11 22-24" fill="none" style="stroke:var(--seal-ink)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="100" y="128" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="15" font-weight="700" style="fill:var(--seal-ink)" letter-spacing="1">Booked</text>`; }
 }
 
 /* ---------- Meldungen und Fragen ------------------------------------- */
@@ -244,15 +195,14 @@ function dateiObjekt(){
   return Object.assign({typ:"buchhaltung", version:5, mandant:state.mandant, jahr:state.jahr, waehrung:state.waehrung,
     kurse:state.kurse, einstellungen:state.einstellungen, sektionen:state.sektionen, titel:state.titel,
     buckets:state.buckets, gruppen:state.gruppen, konten:state.konten, buchungen:state.buchungen,
-    vergleichsjahre:state.vergleichsjahre||[], abgeschlossen:state.abgeschlossen||[], ui:state.ui}, state, {version:5});
+    vergleichsjahre:state.vergleichsjahre||[], abgeschlossen:state.abgeschlossen||[], ui:state.ui}, state, {version:5, settings:Object.assign({}, state.settings||{}, {theme: Kit.theme()})});
 }
-function vorschlag(){
-  const m = (state.mandant||"").replace(/[^\wÄÖÜäöüéèàç &-]+/g,"").trim().toUpperCase();
-  return heute()+"_ACCOUNTING"+(m?" "+m:"")+".json";
-}
-function markiere(){ dirty = true; const b = $("#speichern"); if(b){ b.classList.add("schmutzig"); b.textContent = "Save"; } }
-function sauber(){ dirty = false; const b = $("#speichern"); if(b){ b.classList.remove("schmutzig"); b.textContent = "Saved";
-  if(BEWEGUNG){ b.classList.remove("puls"); void b.offsetWidth; b.classList.add("puls"); } } zeigeDateiname(); }
+function vorschlag(mitDatum){ return heute()+"_EVEN"+(mitDatum ? " COPY" : "")+".json"; }
+/* a file opened under an old name (…_ACCOUNTING ….json) is not written back into: the picker offers the new name once */
+const neuerName = n => /_EVEN\.json$/i.test(n || "");
+function markiere(){ dirty = true; KPI_REIHE = null; const b = $("#speichern"); if(b){ b.classList.add("schmutzig", "is-dirty"); $(".btn__label", b).textContent = "Save"; b.title = "Unsaved changes (Ctrl/Cmd + S)"; } }
+function sauber(){ dirty = false; const b = $("#speichern"); if(b){ b.classList.remove("schmutzig", "is-dirty"); $(".btn__label", b).textContent = "Saved"; b.title = "Everything is saved"; }
+  if(geladen) document.dispatchEvent(new CustomEvent("dl:saved")); zeigeDateiname(); }
 function zeigeDateiname(){
   const el = $("#dateiname"); if(!el) return;
   el.textContent = dateiname || "not saved yet";
@@ -268,6 +218,7 @@ async function uebernehmen(roh, h, name, beispiel){
   handle = h || null; dateiname = name || null; geladen = true; istBeispiel = !!beispiel;
   verlauf.zurueck = []; verlauf.vor = [];
   starteApp(); sauber();
+  if(d && d.settings && d.settings.theme) Kit.set(d.settings.theme, "file");
   // spreads booked the old way (straight onto 1300/2300) in open years: once onto 1305/2305 with the carry-over on 31.12.
   { const probe = E.spreadsUmstellen(JSON.parse(JSON.stringify(state)), E.ctx(state), ()=> "x");
     if(probe.plaene){
@@ -338,7 +289,7 @@ async function speichern(alsNeu, mitDatum){
   if(FSA){
     try{
       let h = handle;
-      if(alsNeu || mitDatum || !h)
+      if(alsNeu || mitDatum || !h || !neuerName(dateiname))
         h = await window.showSaveFilePicker({suggestedName:vorschlag(mitDatum), types:[{description:"Buchhaltung", accept:{"application/json":[".json"]}}]});
       if(!(await schreibrechte(h))){ meldung("Saving needs write access to the file.", {fehler:true}); return false; }
       const strom = await h.createWritable();
@@ -386,8 +337,7 @@ async function sicherung(text){
     let recht = await backupOrdner.queryPermission({mode:"readwrite"});
     if(recht !== "granted") recht = await backupOrdner.requestPermission({mode:"readwrite"});
     if(recht !== "granted") return {fehler:"Backup skipped: no access to the backup folder."};
-    const m = (state.mandant||"").replace(/[^\wÄÖÜäöüéèàç &-]+/g,"").trim().toUpperCase();
-    const name = heute()+"_ACCOUNTING BACKUP"+(m?" "+m:"")+".json";
+    const name = heute()+"_EVEN BACKUP.json";
     const fh = await backupOrdner.getFileHandle(name, {create:true});
     const w = await fh.createWritable(); await w.write(text); await w.close();
     return {ok:true, name:name};
@@ -508,7 +458,7 @@ function starteApp(){
   $("#mandant").value = state.mandant || "";
   bauGeruest();
   neuerEntwurf(true);
-  $("#bPer").classList.toggle("on", !state.ui.ytd); $("#bYtd").classList.toggle("on", !!state.ui.ytd);
+  bereich(!!state.ui.ytd, true);
   zeigeTab(state.ui.tab || "uebersicht");
   zeigeDateiname();
   (window.requestAnimationFrame || setTimeout)(zeichneHintergrund);
@@ -551,7 +501,7 @@ function zeigeTab(id){
   $$("#nav button").forEach(b=> b.classList.toggle("on", b.dataset.tab === id));
   $("#titel").textContent = (SEITEN.find(s=>s.id===id)||{}).t || "";
   const ohneZeitraum = ["konten","aufbau","vergleich","buchen","monate","jahre","bilanz","erfolg","geldfluss","ueberjahre","anlagen","sachanlagen","fsmapping"].indexOf(id) >= 0;
-  $$(".kopf .ctl:not(.jahr), .kopf .seg").forEach(el=> el.style.visibility = ohneZeitraum ? "hidden" : "");
+  $$(".kopf .ctl:not(.jahr), .kopf .segmented").forEach(el=> el.style.visibility = ohneZeitraum ? "hidden" : "");
   render();
   if(id === "uebersicht") hochzaehlen(document.querySelector("#ue-held .kennwert .v"));
   window.scrollTo(0,0);
@@ -566,7 +516,7 @@ function renderPruefstreifen(){
     `<div class="z"><span>Balance difference</span><b>${fz(b.differenz)}</b></div>`+
     `<div class="z"><span>${state.buchungen.filter(x=>String(x.datum).slice(0,4)===String(state.jahr)).length} bookings in ${state.jahr}</span><b>${istGeschlossen(state.jahr)?"closed":"open"}</b></div>`+
     `<div class="z"><span>Opening</span><b>${state.buchungen.some(x=>x.eb && String(x.datum).slice(0,4)===String(state.jahr)) ? "booked" : (E.eroeffnung(state, state.jahr) ? "from "+(state.jahr-1) : "none")}</b></div>`+
-    (k.schief.length ? `<div class="z" style="color:#F2A6AC"><span>Faulty bookings</span><b>${k.schief.length}</b></div>` : "");
+    (k.schief.length ? `<div class="z schief"><span>Faulty bookings</span><b>${k.schief.length}</b></div>` : "");
 }
 function setzeUntertitel(t){ $("#untertitel").textContent = t || ""; }
 
@@ -650,6 +600,102 @@ function diaSigniert(reihe, feld, tipFn){
       <div class="lb">${r.kurz}</div></div>`; }).join("")+`</div>`;
 }
 
+/* ---------- KPI cards (Design Lab KPI card) ----------------------------
+   Value, a line over the last 12 months to the period end (drawn in real pixels so the travelling light stays round;
+   length, colour, speed: the look's --spark-* tokens) and a delta against the period before. Effects listen to
+   'dl:spark' and 'dl:number'. Figures and lines replay only when the period or its figures change. */
+let KPI_ZULETZT = "", KPI_REIHE = null;
+const MK = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const vorMonat = ym => E.monatPlus(ym, -1);
+function cfMonat(K, per, ym){ const c = vorMonat(ym); return per.indexOf(ym) >= 0 && per.indexOf(c) >= 0 ? cfDirektZwischen(K, state, ym, c) : null; }
+function kpiKarten(p, er, k, cfU, b){
+  const box = $("#ue-leiste"); if(!box) return;
+  /* the line: 12 months ending with the period's last month, or with this month while the period is still running
+     (planned spread releases later in the year do not count as "already happened") */
+  const jetzt = new Date(), heuteM = jetzt.getFullYear()+"-"+String(jetzt.getMonth()+1).padStart(2,"0");
+  const ende = (heuteM < p.bis.slice(0,7) && heuteM >= p.von.slice(0,7)) ? heuteM : p.bis.slice(0,7);
+  /* the period before: the same rule as the comparison "previous period" on the statements */
+  const s = (p.k === "J" || p.ytd) ? -12 : (p.k.charAt(0) === "Q" ? -3 : -1);
+  const vvon = E.monatPlus(p.von.slice(0,7), s)+"-01", vbis = E.monatsende(E.monatPlus(p.bis.slice(0,7), s));
+  const vm = +vvon.slice(5,7), label = s === -12 ? (p.ytd || p.k === "J" ? vvon.slice(0,4) : MK[vm-1]+" "+vvon.slice(0,4)) : (s === -3 ? "Q"+(Math.floor((vm-1)/3)+1) : MK[vm-1]);
+  const erV = E.erfolg(state, ix, vvon, vbis), bV = E.bilanz(state, ix, vvon, vbis);
+  const K = fsKern(), per = K.periods();
+  const cfV = (()=>{ const kp = vbis.slice(0,7), kc = vorMonat(vvon.slice(0,7)); return per.indexOf(kp) >= 0 && per.indexOf(kc) >= 0 && kp !== kc ? cfDirektZwischen(K, state, kp, kc) : null; })();
+  const vorDa = !!(erV.ertrag || erV.aufwand);
+  const monate = []; for(let i=11;i>=0;i--) monate.push(E.monatPlus(ende, -i));
+  /* the 12 monthly points are kept until the books change (every change goes through markiere) */
+  const cKey = ende+"|"+(state.buchungen||[]).length;
+  if(!KPI_REIHE || KPI_REIHE.st !== state || KPI_REIHE.key !== cKey) KPI_REIHE = {st:state, key:cKey, reihe: monate.map(ym=>{ const von = ym+"-01", bis = E.monatsende(ym), e = E.erfolg(state, ix, von, bis), bb = E.bilanz(state, ix, von, bis), c = cfMonat(K, per, ym);
+    return {ertrag:e.ertrag, aufwand:e.aufwand, ergebnis:e.ergebnis, ek: bb.aktiven.summe ? bb.eigenkapital/bb.aktiven.summe*100 : null,
+            ocf: c ? c.operating : null, fcf: c ? K.r2(c.operating + c.investing) : null}; })};
+  const reihe = KPI_REIHE.reihe;
+  const linie = feld => reihe.map(r=>r[feld]).filter(v=> v !== null && isFinite(v));
+  const d = (x, einheit, besser, titel, kompakt) => (x === null || !isFinite(x) || Math.abs(x) < (kompakt ? .5 : .05)) ? null :
+    {txt:(x > 0 ? "+" : "\u2212")+(kompakt ? fk(Math.abs(x)) : Math.abs(x).toFixed(1))+(einheit ? " "+einheit : "")+" vs "+label, gut:(x > 0) === (besser > 0), titel:titel+" vs "+fd(vvon)+" to "+fd(vbis)};
+  const ekQ = b.aktiven.summe ? b.eigenkapital/b.aktiven.summe*100 : null, ekQV = bV.aktiven.summe ? bV.eigenkapital/bV.aktiven.summe*100 : null;
+  const fcf = cfU ? K.r2(cfU.operating + cfU.investing) : null, fcfV = cfV ? K.r2(cfV.operating + cfV.investing) : null;
+  const n = Math.max(1, monate.filter(ym=> ym >= p.von.slice(0,7) && ym <= p.bis.slice(0,7) && ym <= ende).length);
+  const karten = [
+    {l:"Income", v:er.ertrag, fmt:fz, linie:linie("ertrag"), d: vorDa ? d(er.ertrag - erV.ertrag, "", 1, "Income", true) : null, fuss:"\u2300 "+fk(er.ertrag/n)+" a month"},
+    {l:"Expenses", v:er.aufwand, fmt:fz, linie:linie("aufwand"), d: vorDa ? d(er.aufwand - erV.aufwand, "", -1, "Expenses", true) : null, fuss:"\u2300 "+fk(er.aufwand/n)+" a month"},
+    {l:"Result", v:er.ergebnis, fmt:fz, linie:linie("ergebnis"), d: vorDa ? d(er.ergebnis - erV.ergebnis, "", 1, "Result", true) : null, fuss:"savings rate "+pz(er.ertrag ? er.ergebnis/er.ertrag : null)},
+    {l:"Equity ratio", v:ekQ, fmt:x=>x.toFixed(1)+"%", linie:linie("ek"), d: vorDa && ekQV !== null && ekQ !== null ? d(ekQ - ekQV, "pts", 1, "Equity ratio, in percentage points,") : null, fuss:"at "+fd(p.bis)},
+    {l:"Operating cash flow", v:cfU ? cfU.operating : null, fmt:fz, linie:linie("ocf"), d: cfU && cfV && vorDa ? d(cfU.operating - cfV.operating, "", 1, "Operating cash flow", true) : null, fuss:"direct method"},
+    {l:"Free cash flow", v:fcf, fmt:fz, linie:linie("fcf"), d: fcf !== null && fcfV !== null && vorDa ? d(fcf - fcfV, "", 1, "Free cash flow", true) : null, fuss:"after investing"}
+  ];
+  const schluessel = [p.von, p.bis, state.buchungen.length].concat(karten.map(x=> x.v === null ? "" : E.r2(x.v))).join("|");
+  const lauf = BEWEGUNG && schluessel !== KPI_ZULETZT; KPI_ZULETZT = schluessel;
+  box.innerHTML = karten.map(x=>`<div class="card kpi"><div><div class="kpi__label"><span>${x.l}</span></div><div class="kpi__value${x.v !== null && x.v < 0 ? " neg" : ""}"><b>${x.v === null ? "\u2013" : x.fmt(x.v)}</b></div></div>
+    <div><svg class="spark" aria-hidden="true"></svg><div class="kpi__foot">${x.d ? `<span class="delta ${x.d.gut ? "delta--up" : "delta--flat"}" title="${esc(x.d.titel)}">${esc(x.d.txt)}</span>` : ""}<span>${esc(x.fuss)}</span></div></div></div>`).join("");
+  const bs = [...box.querySelectorAll(".kpi__value b")], sv = [...box.querySelectorAll("svg.spark")];
+  requestAnimationFrame(()=>{
+    karten.forEach((x, i)=>{
+      if(lauf && x.v !== null && sv[i].isConnected) zaehleKpi(bs[i], x.v, x.fmt);
+      if(sv[i].isConnected) kpiSpark(sv[i], x.linie, lauf, 220 + i * 110);
+    });
+  });
+}
+function zaehleKpi(el, ziel, fmt){
+  const fertig = () => el.dispatchEvent(new CustomEvent("dl:number", {bubbles:true}));
+  if(window.Kit && Kit.numberReveal(el, 0, ziel, fmt, fertig)) return;
+  const t0 = performance.now(), dauer = 800;
+  const schritt = t => { const x = Math.min(1, (t - t0) / dauer), e = 1 - Math.pow(1 - x, 3); el.textContent = fmt(ziel * e); if(x < 1) requestAnimationFrame(schritt); else { el.textContent = fmt(ziel); fertig(); } };
+  requestAnimationFrame(schritt);
+}
+function kpiGlatt(pts){
+  let d = "M"+pts[0][0].toFixed(1)+","+pts[0][1].toFixed(1);
+  for(let i=1;i<pts.length;i++){ const a = pts[i-1], q = pts[i], mx = (a[0]+q[0])/2; d += "C"+mx.toFixed(1)+","+a[1].toFixed(1)+" "+mx.toFixed(1)+","+q[1].toFixed(1)+" "+q[0].toFixed(1)+","+q[1].toFixed(1); }
+  return d;
+}
+function kpiSignal(el, phase){ try{ el.dispatchEvent(new CustomEvent("dl:spark", {bubbles:true, detail:{phase:phase}})); }catch(e){} }
+function kpiSpark(sv, data, lauf, delay){
+  const W = Math.max(40, Math.round(sv.getBoundingClientRect().width || 160)), H = 34, px = 4, py = 5;
+  sv.setAttribute("viewBox", "0 0 "+W+" "+H);
+  sv.innerHTML = '<path class="spark__glow"/><path class="spark__line"/><path class="spark__trail t1"/><path class="spark__trail t2"/><path class="spark__trail t3"/><circle class="spark__head" r="2.6"/>';
+  let d = "";
+  if(data.length > 1){ const lo = Math.min(...data), hi = Math.max(...data), r = hi - lo || 1;
+    d = kpiGlatt(data.map((v,i)=>[px + i/(data.length-1)*(W-2*px), H - py - (v-lo)/r*(H-2*py)])); }
+  sv.querySelectorAll(".spark__glow, .spark__line, .spark__trail").forEach(q=>q.setAttribute("d", d));
+  const line = sv.querySelector(".spark__line"), total = d && line.getTotalLength ? line.getTotalLength() : 0;
+  if(!lauf || !total){ sv.classList.add("is-done"); kpiSignal(sv, "rest"); return; }
+  const dur = Number(Kit.tok("--spark-dur")) || 1100, tl = Number(Kit.tok("--spark-trail-len")) || .25, glow = sv.querySelector(".spark__glow"), head = sv.querySelector(".spark__head");
+  const trails = [[".t1",1],[".t2",.5],[".t3",.2]].map(([c,fa])=>[sv.querySelector(c), Math.max(4, tl*fa*total)]);
+  [line, glow].forEach(q=>{ q.style.strokeDasharray = total+" "+total; q.style.strokeDashoffset = total; });
+  trails.forEach(([q])=>{ q.style.strokeDasharray = "0 "+total*2; });
+  head.setAttribute("transform", "translate(-20 -20)");
+  sv.classList.add("is-running"); kpiSignal(sv, "start");
+  const t0 = performance.now() + delay, ease = x => x < .5 ? 2*x*x : 1 - Math.pow(-2*x+2, 2)/2;
+  (function schritt(now){
+    if(!sv.isConnected) return;
+    const x = Math.max(0, Math.min(1, (now - t0)/dur)), dd = ease(x)*total;
+    line.style.strokeDashoffset = total - dd; glow.style.strokeDashoffset = total - dd;
+    trails.forEach(([q,L])=>{ const l = Math.min(L, dd); q.style.strokeDasharray = l+" "+total*2; q.style.strokeDashoffset = -(dd - l); });
+    if(x > 0){ const pt = line.getPointAtLength(dd); head.setAttribute("transform", "translate("+pt.x.toFixed(2)+" "+pt.y.toFixed(2)+")"); }
+    if(x < 1) requestAnimationFrame(schritt);
+    else { line.style.strokeDasharray = ""; line.style.strokeDashoffset = ""; sv.classList.remove("is-running"); sv.classList.add("is-done"); kpiSignal(sv, "end"); }
+  })(performance.now());
+}
+
 /* ---------- Overview ------------------------------------------------- */
 function renderUebersicht(){
   const p = periodeAktiv();
@@ -664,11 +710,11 @@ function renderUebersicht(){
   const kp = p.bis.slice(0,7), kc = monatVor(p.von), per = K.periods();
   const cfU = per.indexOf(kp) >= 0 && per.indexOf(kc) >= 0 && kp !== kc ? cfDirektZwischen(K, state, kp, kc) : null;
   const total = Math.max(b.aktiven.summe, b.passiven.summe, 1);
-  const farben = {UV:"#4A7DB5", AV:"#1F3F66", KFK:"#8FA6BF", LFK:"#627A94", EK:"#2F5E91"};
+  const farben = {UV:"var(--ev-uv)", AV:"var(--ev-av)", KFK:"var(--ev-kfk)", LFK:"var(--ev-lfk)", EK:"var(--ev-ek)"};
   const bloecke = sek => sek.map(s=>{
     const w = Math.max(0, s.summe), anteil = w/total;
     if(w < .005) return "";
-    return `<div class="bb-block${anteil<.17?" klein":""}" style="flex:${w} 1 0;background:${farben[s.code]||"#627A94"}"
+    return `<div class="bb-block${anteil<.17?" klein":""}" style="flex:${w} 1 0;background:${farben[s.code]||"var(--ev-lfk)"}"
       data-tip="${esc(`<b>${esc(s.titel)}</b>`+tipZeile("Amount", fz(s.summe))+tipZeile("Share of total", pct(s.summe, total)))}">
       <span>${esc(s.titel)}</span><b>${fk(s.summe)}</b></div>`;
   }).join("");
@@ -687,10 +733,7 @@ function renderUebersicht(){
         <div><div class="l">Liabilities</div><div class="v">${fz(b.fremdkapital)}</div></div>
       </div>
     </div></div>`;
-  $("#ue-leiste").innerHTML = [
-    ["Income", f(er.ertrag)], ["Expenses", f(er.aufwand)], ["Result", f(er.ergebnis)],
-    ["Equity ratio", pz(k.ekQuote)], ["Operating cash flow", cfU ? f(cfU.operating) : "–"], ["Free cash flow", cfU ? f(K.r2(cfU.operating + cfU.investing)) : "–"]
-  ].map(x=>`<div><div class="l">${x[0]}</div><div class="v ${String(x[1]).charAt(0)==="\u2212"?"neg":""}">${x[1]}</div></div>`).join("");
+  kpiKarten(p, er, k, cfU, b);
   let kum = 0; const mitKum = jr.monate.map(r=>{ kum = E.r2(kum + r.ergebnis); return Object.assign({kum:kum}, r); });
   $("#ue-dia1").innerHTML = diaZwei(mitKum,"ertrag","aufwand", r=>`<b>${r.name} ${state.jahr}</b>`+tipZeile("Income", fz(r.ertrag))+tipZeile("Expenses", fz(r.aufwand))+tipZeile("Result", fz(r.ergebnis)));
   $("#ue-dia2").innerHTML = diaSigniert(mitKum,"ergebnis", r=>`<b>${r.name} ${state.jahr}</b>`+tipZeile("Result", fz(r.ergebnis))+tipZeile("Year to date", fz(r.kum))+tipZeile("Savings rate", r.ertrag?pz(r.ergebnis/r.ertrag):"–"));
@@ -818,7 +861,7 @@ function journalExcel(monat){
 function journalPdf(monat){
   const d = journalDaten(monat);
   if(!d.liste.length){ meldung("No bookings in "+d.titel+".", {fehler:true}); return; }
-  const konto = nr => nr ? `${esc(nr)} <span style="color:#8592A6">${esc(kontoName(nr))}</span>` : `<span style="color:#8592A6">Split</span>`;
+  const konto = nr => nr ? `${esc(nr)} <span style="color:var(--text-3)">${esc(kontoName(nr))}</span>` : `<span style="color:var(--text-3)">Split</span>`;
   const sek = Object.keys(d.monate).sort().map(m=>{
     const bs = d.monate[m], summe = E.r2(bs.reduce((a,b)=>a+buchungsform(b).betrag,0));
     return `<section><h2>Journal ${E.MONATE[+m.slice(5,7)-1]} ${m.slice(0,4)}</h2><div class="rb-sub">${esc(state.mandant)}, amounts in ${esc(state.waehrung)}, ${bs.length} bookings</div>
@@ -869,7 +912,7 @@ function ledgerPdf(monat){
       <th style="width:26mm">Debit</th><th style="width:26mm">Credit</th>${w?`<th style="width:24mm">${esc(w)}</th>`:""}<th style="width:28mm">Balance</th></tr></thead><tbody>
     <tr class="gruppe"><td></td><td>Opening balance</td><td></td><td></td><td></td>${w?z(hb.fwAnfang):""}${z(hb.anfang)}</tr>`+
     hb.zeilen.map(x=>{ const g = hbGegen(x.gegenkonto);
-      return `<tr class="konto"><td>${fd(x.datum)}</td><td>${esc(x.text||"")}</td><td>${esc(g)}${ix.km[g]?` <span style="color:#8592A6">${esc(kontoName(g))}</span>`:""}</td>
+      return `<tr class="konto"><td>${fd(x.datum)}</td><td>${esc(x.text||"")}</td><td>${esc(g)}${ix.km[g]?` <span style="color:var(--text-3)">${esc(kontoName(g))}</span>`:""}</td>
         ${leer(x.soll)}${leer(x.haben)}${w?`<td class="z">${x.fw?(x.soll?"":"−")+fz(x.fw):""}</td>`:""}${z(x.saldo)}</tr>`; }).join("")+
     `<tr class="summe"><td></td><td>Closing balance</td><td></td>${z(hb.summeSoll)}${z(hb.summeHaben)}${w?z(hb.fwEnde):""}${z(hb.ende)}</tr></tbody></table></section>`;
   drucke(druckStil(true) + LINIEN_STIL + html, heute()+"_LEDGER "+d.name+" "+dateiName(state.mandant));

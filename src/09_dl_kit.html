@@ -1,0 +1,810 @@
+<!-- DESIGN LAB kit, copied from APPS/01 DESIGN LAB/02 Build Kit FINAL/common. Never edit here: refresh with 01 READ FIRST/tools/dl_sync.py -->
+<!-- THEMES: look (meta) + signature-effects module, one pair each -->
+<script id="theme-glass">
+(function(){
+window.THEME = {
+  id: 'glass', name: 'Glass',
+  fontLine: 'SF Pro Rounded for display and figures, SF Pro for text (Segoe on Windows). No web fonts.',
+  icon(u){
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><defs>' +
+      '<linearGradient id="' + u + 'b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1D3A57"/><stop offset=".6" stop-color="#0E1B28"/><stop offset="1" stop-color="#070B10"/></linearGradient>' +
+      '<radialGradient id="' + u + 'o"><stop offset="0" stop-color="#7DB1E6" stop-opacity=".85"/><stop offset="1" stop-color="#7DB1E6" stop-opacity="0"/></radialGradient>' +
+      '<linearGradient id="' + u + 'p" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".55"/><stop offset="1" stop-color="#C9DDF5" stop-opacity=".1"/></linearGradient>' +
+      '<linearGradient id="' + u + 's" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/><stop offset="1" stop-color="#FFFFFF" stop-opacity=".12"/></linearGradient>' +
+      '</defs><rect width="100" height="100" fill="url(#' + u + 'b)"/>' +
+      '<circle cx="64" cy="66" r="34" fill="url(#' + u + 'o)"/>' +
+      '<rect x="20" y="20" width="40" height="40" rx="12" fill="#4A7DB5" fill-opacity=".7"/>' +
+      '<rect x="35" y="35" width="44" height="44" rx="13" fill="url(#' + u + 'p)" stroke="url(#' + u + 's)" stroke-width="1.3"/>' +
+      '<path d="M43 44h20" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="2.4" stroke-linecap="round"/></svg>';
+  }
+};
+const m = window.THEME; delete window.THEME;
+Object.assign(m, {"color": "#070B10", "scheme": "dark", "font": null, "mood": "Dark · cool blue · frosted", "lead": "Frosted panels over a slow, drifting light. Soft depth, calm gradients and spring-loaded motion: built for the tools you open every day, like the Calorie Tracker."});
+(window.DL_THEMES = window.DL_THEMES || {})["glass"] = { meta: m, fx: null };
+})();
+</script>
+<script id="effects-glass">
+(function(){
+/* GLASS · signature-effects module. Optional: if it is missing or throws, the tool works the same.
+   Everything it adds or listens to goes through api.add / api.on, so switching to another look removes it cleanly. */
+window.THEME_FX = {
+  effects: [
+    { id: 'light', kind: 'signature', name: 'Drifting light', desc: 'One slow layer of blurred light moving under the glass. The only ambient element.' },
+    { id: 'depth', kind: 'signature', name: 'Depth stack', desc: 'When a dialog or sheet opens, the page behind sinks back and dims; when it closes, the page floats forward again.' },
+    { id: 'liquid', kind: 'signature', name: 'Liquid pill', desc: 'Tab pill and toggles stretch as they travel, then wobble into place like a drop of water.' },
+    { id: 'float', kind: 'signature', name: 'Float', desc: 'Tiles lift towards you on hover, press in under your finger and spring back, and rise into place as you scroll.' },
+    { id: 'frost', kind: 'signature', name: 'Frost glint', desc: 'The light on each KPI line sheds a little frost as it travels and lands with a glint. Now and then an end point twinkles.' },
+    { id: 'tilt', kind: 'extra', name: 'Depth tilt', desc: 'KPI cards lean towards the pointer and the figure floats above the glass (desktop).' }
+  ],
+  init(api){
+    const { $, $$, h, REDUCED } = api;
+    const fine = window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches;
+    const NS = 'http://www.w3.org/2000/svg';
+    const sv = (tag, at) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); return e; };
+    const self = this;
+
+    /* drifting light */
+    ['a', 'b', 'c'].forEach(k => api.add(h('i', { class: 'orb ' + k })));
+
+    /* depth stack: counts open dialogs, so a dialog opened from a dialog keeps the page back */
+    const main = $('#main'); let depth = $$('.overlay:not(.is-closing)').length;
+    const apply = () => {
+      if (depth > 0 && api.isOn('depth') && !REDUCED){
+        main.style.transformOrigin = '50% ' + Math.round(window.scrollY + window.innerHeight / 2 - main.offsetTop) + 'px';
+        main.classList.add('is-receded');
+      } else main.classList.remove('is-receded');
+    };
+    api.on(document, 'dl:overlay', e => { depth = Math.max(0, depth + (e.detail && e.detail.open ? 1 : -1)); apply(); });
+    this._depth = apply;
+
+    /* liquid pill */
+    (api.each || ((sel, fn) => $$(sel).forEach(fn)))('.segmented__thumb', t => { if (!t.querySelector('i')) api.add(h('i'), t); });
+    const squish = el => {
+      if (!el || REDUCED || !api.isOn('liquid')) return;
+      el.classList.add('is-moving'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('is-moving'), 150);
+    };
+    api.on($('#tabs'), 'dl:tab', () => squish($('#tabs .tabs__indicator i')));   // tools without top tabs (EVEN: side navigation) skip this
+    api.on(document, 'dl:seg', e => squish(e.target.querySelector('.segmented__thumb > i')));
+
+    /* float: small tiles lift and press; every tile below the fold rises in once */
+    const floatOk = c => c.classList.contains('kpi') || c.classList.contains('float-ok') || (!c.classList.contains('no-float') && c.offsetHeight <= 380 && !c.querySelector('table, form, textarea, input, select, #lineChart, #barChart, #donut, .chart, svg.chart'));
+    const markOne = c => c.classList.toggle('is-float', floatOk(c));
+    const markFloat = () => $$('.card').forEach(markOne);
+    markFloat();
+    let rt = null; api.on(window, 'resize', () => { clearTimeout(rt); rt = api.later(markFloat, 200); });
+    const CONTROLS = 'button, a, input, select, textarea, label, [role="button"], [role="tab"], .segmented, .tabs, .dd, summary';
+    let pressed = null;
+    const release = () => { if (pressed){ pressed.classList.remove('is-pressed'); pressed = null; } };
+    api.on(document, 'pointerdown', e => {
+      if (REDUCED || !api.isOn('float') || e.button > 0) return;
+      const c = e.target.closest && e.target.closest('.card.is-float');
+      if (!c || e.target.closest(CONTROLS)) return;
+      pressed = c; c.classList.add('is-pressed');
+    }, { passive: true });
+    ['pointerup', 'pointercancel', 'dragstart'].forEach(t => api.on(document, t, release, { passive: true }));
+    api.on(window, 'scroll', release, { passive: true });
+
+    if (!REDUCED && 'IntersectionObserver' in window){
+      const io = new IntersectionObserver(es => es.forEach(en => {
+        if (!en.isIntersecting) return;
+        const c = en.target; io.unobserve(c);
+        c.classList.add('is-rising'); requestAnimationFrame(() => c.classList.remove('is-rise'));
+        api.later(() => c.classList.remove('is-rising'), 1000);
+      }), { rootMargin: '0px 0px -6% 0px', threshold: .08 });
+      const riseOne = c => { if (c.getBoundingClientRect().top > window.innerHeight){ c.classList.add('is-rise'); io.observe(c); } };
+      $$('.card').forEach(riseOne);
+      this._io = io;
+      /* pages a tool draws later: mark them too (once per card) */
+      if (api.each) api.each('.card', c => { requestAnimationFrame(() => { if (!c.isConnected) return; markOne(c); riseOne(c); }); });
+    }
+
+    /* frost glint: listens to the sparkline's start / end / rest signals */
+    const dots = new WeakMap(), heads = new WeakMap();
+    const dotOf = svg => {
+      let g = dots.get(svg);
+      if (!g || !g.isConnected){
+        g = sv('g', { class: 'gdot' });
+        g.appendChild(sv('circle', { class: 'gdot__halo', r: '5.5' }));
+        g.appendChild(sv('circle', { class: 'gdot__core', r: '2' }));
+        g.appendChild(sv('polygon', { class: 'gdot__star', points: '0,-8 .9,-.9 8,0 .9,.9 0,8 -.9,.9 -8,0 -.9,-.9' }));
+        api.add(g, svg); dots.set(svg, g);
+      }
+      return g;
+    };
+    const headOf = svg => {
+      let g = heads.get(svg);
+      if (!g || !g.isConnected){
+        g = sv('g', { class: 'ghead' });
+        g.appendChild(sv('polygon', { points: '0,-6.5 .7,-.7 6.5,0 .7,.7 0,6.5 -.7,.7 -6.5,0 -.7,-.7' }));
+        api.add(g, svg); heads.set(svg, g);
+      }
+      return g;
+    };
+    const endPoint = svg => {
+      const line = svg.querySelector('.spark__line'); const L = line && line.getTotalLength ? line.getTotalLength() : 0;
+      return L ? line.getPointAtLength(L) : null;
+    };
+    const place = (svg, twinkle) => {
+      const p = endPoint(svg); if (!p) return;
+      const g = dotOf(svg); g.setAttribute('transform', 'translate(' + p.x.toFixed(2) + ' ' + p.y.toFixed(2) + ')'); g.classList.add('is-on');
+      if (twinkle) twinkleDot(g);
+    };
+    const twinkleDot = g => {
+      if (REDUCED || !api.isOn('frost')) return;
+      g.classList.remove('is-twinkle'); requestAnimationFrame(() => { g.classList.add('is-twinkle'); api.later(() => g.classList.remove('is-twinkle'), 1150); });
+    };
+    const follow = svg => {
+      const head = svg.querySelector('.spark__head'), gh = headOf(svg);
+      let lx = null, ly = null;
+      const tick = () => {
+        if (!api.alive() || !svg.classList.contains('is-running')){ gh.classList.remove('is-on'); return; }
+        const m = /translate\(([-\d.]+)[ ,]+([-\d.]+)\)/.exec(head.getAttribute('transform') || '');
+        if (m){
+          const x = +m[1], y = +m[2];
+          if (x > -10){
+            gh.setAttribute('transform', 'translate(' + x + ' ' + y + ')'); gh.classList.add('is-on');
+            if (lx === null || Math.hypot(x - lx, y - ly) > 7){
+              if (lx !== null && api.isOn('frost')){
+                const c = sv('circle', { class: 'gl', cx: (x + (Math.random() - .5) * 5).toFixed(1), cy: (y + (Math.random() - .5) * 6).toFixed(1), r: (.7 + Math.random() * 1).toFixed(2) });
+                svg.appendChild(c); setTimeout(() => c.remove(), 950);
+              }
+              lx = x; ly = y;
+            }
+          }
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+    api.on(document, 'dl:spark', e => {
+      const svg = e.target, ph = e.detail && e.detail.phase;
+      if (ph === 'start'){ const g = dots.get(svg); if (g) g.classList.remove('is-on'); if (!REDUCED) follow(svg); }
+      else if (ph === 'end') place(svg, true);
+      else if (ph === 'rest') place(svg, false);
+    });
+    $$('.spark.is-done').forEach(s => place(s, false));
+    /* now and then, one end point twinkles; never while the tab is hidden */
+    const idle = () => {
+      api.later(() => {
+        if (document.visibilityState === 'visible'){
+          const all = $$('.spark.is-done').filter(s => { const r = s.getBoundingClientRect(); return r.bottom > 0 && r.top < window.innerHeight; });
+          if (all.length){ const g = dots.get(all[Math.floor(Math.random() * all.length)]); if (g) twinkleDot(g); }
+        }
+        idle();
+      }, 5500 + Math.random() * 5000);
+    };
+    if (!REDUCED) idle();
+
+    /* depth tilt: lean plus lift, and the figure floats a little further than the card */
+    if (fine && !REDUCED){
+      /* delegated, so KPI cards the tool draws later tilt too */
+      let cur = null;
+      const off = () => { if (cur){ cur.classList.remove('is-tilting'); cur.style.transform = ''; cur = null; } };
+      api.on(document, 'pointermove', e => {
+        const k = e.target.closest && e.target.closest('.kpi');
+        if (k !== cur) off();
+        if (!k || !api.isOn('tilt') || k.classList.contains('is-pressed')) return;
+        cur = k;
+        const r = k.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+        const lift = api.isOn('float') ? ' translate3d(0,-5px,0)' : '';
+        k.classList.add('is-tilting');
+        k.style.setProperty('--gx', (x * 2).toFixed(3)); k.style.setProperty('--gy', (y * 2).toFixed(3));
+        k.style.transform = 'perspective(700px)' + lift + ' rotateX(' + (-y * 11).toFixed(2) + 'deg) rotateY(' + (x * 12).toFixed(2) + 'deg)';
+      }, { passive: true });
+      api.on(document, 'pointerleave', off);
+    }
+    self._cleanup = () => {
+      $$('.card').forEach(c => { c.classList.remove('is-float', 'is-pressed', 'is-rise', 'is-rising', 'is-tilting'); });
+      $$('.kpi').forEach(k => { k.style.transform = ''; k.style.removeProperty('--gx'); k.style.removeProperty('--gy'); });
+      $$('.spark .gl').forEach(n => n.remove());
+    };
+  },
+  toggle(id, on){
+    if (id === 'depth' && this._depth) this._depth();
+    if (id === 'tilt' && !on) document.querySelectorAll('.kpi').forEach(k => { k.style.transform = ''; k.classList.remove('is-tilting'); });
+    if (id === 'float' && !on) document.querySelectorAll('.card.is-rise').forEach(c => c.classList.remove('is-rise'));
+  },
+  destroy(){
+    if (this._io) this._io.disconnect(); this._io = null;
+    if (this._cleanup) this._cleanup(); this._cleanup = null;
+    const m = document.getElementById('main'); if (m){ m.classList.remove('is-receded'); m.style.transformOrigin = ''; }
+    this._depth = null;
+  }
+};
+if (window.DL_THEMES && window.DL_THEMES["glass"]) window.DL_THEMES["glass"].fx = window.THEME_FX;
+delete window.THEME_FX;
+})();
+</script>
+<script id="theme-ember">
+(function(){
+window.THEME = {
+  id: 'ember', name: 'Ember',
+  fontLine: 'Space Grotesk for display and figures (Google Fonts, system fallback), SF Pro / Segoe for text.',
+  icon(u){
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><defs>' +
+      '<linearGradient id="' + u + 'b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B130C"/><stop offset="1" stop-color="#0C0605"/></linearGradient>' +
+      '<radialGradient id="' + u + 'g" cx=".5" cy=".85" r=".6"><stop offset="0" stop-color="#FF6A2B" stop-opacity=".75"/><stop offset="1" stop-color="#FF6A2B" stop-opacity="0"/></radialGradient>' +
+      '<linearGradient id="' + u + 'f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset=".45" stop-color="#FF7A2E"/><stop offset="1" stop-color="#D92A16"/></linearGradient>' +
+      '</defs><rect width="100" height="100" fill="url(#' + u + 'b)"/><rect width="100" height="100" fill="url(#' + u + 'g)"/>' +
+      '<path d="M50 14c10 12 22 21 19.6 41.6C68.2 70 60 80 50 80S31.6 72.2 30.8 60.4C30 49 36.6 42 40.6 35c.7 7.8 4 11.8 8.2 13.2C46.4 39.4 45 28.6 50 14z" fill="url(#' + u + 'f)"/>' +
+      '<path d="M50.4 48c5.6 6.9 10.1 11.4 8.2 19.4C57.5 72 54.3 74.8 50.4 74.8S43.3 72.2 42.5 68.1c-.9-4.7 1.8-8.2 4.3-11 .3 3.9 1.9 5.7 3.9 6-1.1-4.7-1.7-9.9-.3-15.1z" fill="#FFE9B8" fill-opacity=".9"/>' +
+      '<path d="M26 86h48" stroke="#FF8A3D" stroke-opacity=".7" stroke-width="2.4" stroke-linecap="round"/></svg>';
+  }
+};
+const m = window.THEME; delete window.THEME;
+Object.assign(m, {"color": "#0C0807", "scheme": "dark", "font": "Space+Grotesk:wght@500;600;700", "mood": "Dark · fire · punchy", "lead": "Charcoal and live coals. Bold type, punchy press feedback and a glow that breathes at the bottom of the screen. Energetic, but every control stays where your thumb expects it."});
+(window.DL_THEMES = window.DL_THEMES || {})["ember"] = { meta: m, fx: null };
+})();
+</script>
+<script id="effects-ember">
+(function(){
+/* EMBER · signature-effects module. Optional: if it is missing or throws, the tool works the same.
+   Everything it adds or listens to goes through api.add / api.on, so switching to another look removes it cleanly. */
+window.THEME_FX = {
+  effects: [
+    { id: 'glow', kind: 'signature', name: 'Ember bed', desc: 'A low glow at the bottom of the screen that breathes, slowly. The only ambient element.' },
+    { id: 'strike', kind: 'signature', name: 'Strike', desc: 'Buttons punch back when pressed: a flash of heat from the tap point, a molten sheen on hover.' },
+    { id: 'heat', kind: 'signature', name: 'Heat-up', desc: 'KPI cards carry a live ember edge, and each number flares as it lands.' },
+    { id: 'sparks', kind: 'extra', name: 'Sparks', desc: 'A few sparks drifting up from the embers. Rare enough to notice, never in the way.' }
+  ],
+  init(api){
+    const { $$, h, REDUCED } = api;
+
+    /* ember bed + sparks */
+    api.add(h('i', { class: 'embers' }));
+    const n = window.innerWidth < 700 ? 7 : 12;
+    for (let k = 0; k < n; k++){
+      const s = h('i', { class: 'spark' });
+      s.style.left = (6 + Math.random() * 88) + '%';
+      s.style.setProperty('--t', (11 + Math.random() * 9).toFixed(1) + 's');
+      s.style.setProperty('--d', (-Math.random() * 18).toFixed(1) + 's');
+      s.style.setProperty('--x', ((Math.random() - .5) * 140).toFixed(0) + 'px');
+      if (Math.random() < .35){ s.style.width = s.style.height = '2px'; }
+      api.add(s);
+    }
+
+    /* strike */
+    api.on(document, 'pointerdown', e => {
+      if (REDUCED || !api.isOn('strike')) return;
+      const b = e.target.closest && e.target.closest('.btn, .chip--filter, .segmented button');
+      if (!b || b.disabled) return;
+      const r = b.getBoundingClientRect(), s = h('span', { class: 'strike', 'aria-hidden': 'true' });
+      s.style.left = (e.clientX - r.left) + 'px'; s.style.top = (e.clientY - r.top) + 'px';
+      b.appendChild(s); setTimeout(() => s.remove(), 600);
+    }, { passive: true });
+
+    /* heat-up */
+    (api.each || ((sel, fn) => $$(sel).forEach(fn)))('.kpi', k => { if (k.querySelector(':scope > .edge')) return; api.add(h('span', { class: 'edge', 'aria-hidden': 'true' }, [h('i')]), k); api.add(h('span', { class: 'flare', 'aria-hidden': 'true' }), k); });
+    api.on(document, 'dl:number', e => {
+      const k = e.target.closest && e.target.closest('.kpi');
+      if (!k || REDUCED || !api.isOn('heat')) return;
+      k.classList.remove('is-flaring'); void k.offsetWidth; k.classList.add('is-flaring');
+      api.later(() => k.classList.remove('is-flaring'), 1400);
+    });
+  },
+  destroy(){ document.querySelectorAll('.kpi.is-flaring').forEach(k => k.classList.remove('is-flaring')); }
+};
+if (window.DL_THEMES && window.DL_THEMES["ember"]) window.DL_THEMES["ember"].fx = window.THEME_FX;
+delete window.THEME_FX;
+})();
+</script>
+<script id="theme-prism">
+(function(){
+window.THEME = {
+  id: 'prism', name: 'Prism',
+  fontLine: 'Unbounded for display (Google Fonts, system fallback), SF Pro / Segoe for figures and text.',
+  icon(u){
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><defs>' +
+      '<linearGradient id="' + u + 'b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E4E1F6"/></linearGradient>' +
+      '<linearGradient id="' + u + 's" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6E56FF"/><stop offset=".25" stop-color="#16B2E3"/><stop offset=".5" stop-color="#1FC796"/><stop offset=".75" stop-color="#FFAA2E"/><stop offset="1" stop-color="#FF5C8A"/></linearGradient>' +
+      '<linearGradient id="' + u + 'p" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/><stop offset="1" stop-color="#D9D3FF" stop-opacity=".75"/></linearGradient>' +
+      '</defs><rect width="100" height="100" fill="url(#' + u + 'b)"/>' +
+      '<path d="M4 63L44 52" stroke="#5B48F5" stroke-opacity=".35" stroke-width="2.2" stroke-linecap="round"/>' +
+      '<path d="M57 50L98 33L98 78Z" fill="url(#' + u + 's)" fill-opacity=".8"/>' +
+      '<path d="M50 18Q52 15 54.2 18.6L75.4 66.8Q76.6 70.6 72.6 70.6H27.4Q23.4 70.6 24.6 66.8L45.8 18.6Z" fill="url(#' + u + 'p)" stroke="#5B48F5" stroke-opacity=".55" stroke-width="1.4"/>' +
+      '<path d="M50 26L66 63" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-opacity=".9"/></svg>';
+  }
+};
+const m = window.THEME; delete window.THEME;
+Object.assign(m, {"color": "#F2F2F7", "scheme": "light", "font": "Unbounded:wght@500;600;700", "mood": "Light · pearl · iridescent", "lead": "A crystal object on a pearl wall. The whole interface shares one light source: your pointer, the tilt of your phone, or a slow drift when you are not touching anything. Every panel catches it, splits it into colour and throws it back."});
+(window.DL_THEMES = window.DL_THEMES || {})["prism"] = { meta: m, fx: null };
+})();
+</script>
+<script id="effects-prism">
+(function(){
+/* PRISM · signature-effects module. Optional: if it is missing or throws, the tool works the same.
+   One light source for the whole page (pointer, phone tilt, or a slow drift when nobody touches anything):
+   it moves the caustic light on the wall and places a glint on the edge of every panel that faces it.
+   Everything it adds or listens to goes through api.add / api.on / api.loop, so switching looks removes it cleanly. */
+window.THEME_FX = (function(){
+  let API = null, tiltOn = false, lastInput = -1e9;
+  const L = { x: -.4, y: -.6, tx: -.4, ty: -.6 };
+  return {
+    effects: [
+      { id: 'caustic', kind: 'signature', name: 'Caustic light', desc: 'Soft rainbow light on the wall, as if the sun came through a crystal. Drifts slowly and leans towards your pointer. The only ambient element.' },
+      { id: 'rim', kind: 'signature', name: 'Spectral edge', desc: 'Every panel has a hairline of split light, and a glint sits on the edge that faces the light. Primary buttons get a flash of light on hover.' },
+      { id: 'focus', kind: 'signature', name: 'Refraction focus', desc: 'Key figures arrive split into colour, then snap into focus.' },
+      { id: 'sweep', kind: 'extra', name: 'Save beam', desc: 'A thin beam of spectrum crosses the screen when a save succeeds.' },
+      { id: 'phonetilt', kind: 'extra', off: true, name: 'Phone tilt', desc: 'Tilting the phone moves the light. On the iPhone, iOS forgets the motion access whenever the app closes, so the app never asks by itself: switch it on when you want it (one prompt for that visit).' }
+    ],
+
+    numberRevealEffect: 'focus',
+    numberReveal(el, from, to, fmt, done){
+      const txt = fmt(to), key = {}, mk = c => { const s = document.createElement('span'); s.className = c; s.textContent = txt; return s; };
+      el._refr = key;
+      const w = document.createElement('span'); w.className = 'refr';
+      w.appendChild(mk('refr__main'));
+      ['a', 'b', 'c'].forEach(k => { const g = mk('refr__g refr__g--' + k); g.setAttribute('aria-hidden', 'true'); w.appendChild(g); });
+      el.textContent = ''; el.appendChild(w);
+      setTimeout(() => { if (el._refr !== key) return; el.textContent = txt; done(); }, 1050);
+    },
+
+    init(api){
+      API = api; tiltOn = false; lastInput = -1e9;
+      const { $$, h, REDUCED } = api;
+
+      /* caustic light */
+      const caustic = api.add(h('div', { class: 'caustic' }, [h('i', { class: 'glow' }), h('i', { class: 'band b1' }), h('i', { class: 'band b2' })]));
+
+      let px = 1e9, py = 1e9, dirty = true;
+      /* spectral edges, tracked only while their panel is on screen (also panels the tool draws later) */
+      const vis = new Set();
+      const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) vis.add(e.target); else vis.delete(e.target); }), { rootMargin: '120px' }) : null;
+      api.each('.card', c => {
+        const rim = api.add(h('span', { class: 'rim', 'aria-hidden': 'true' }, [h('i')]), c);
+        c._glint = rim.firstChild;
+        if (io) io.observe(c); else vis.add(c);
+        dirty = true;
+      });
+      this._io = io;
+
+      /* the light source */
+      const fine = window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches;
+      if (fine) api.on(document, 'pointermove', e => {
+        L.tx = e.clientX / window.innerWidth * 2 - 1; L.ty = e.clientY / window.innerHeight * 2 - 1; lastInput = performance.now();
+      }, { passive: true });
+      /* phone tilt. Android and others: on whenever the switch is on. iPhone: iOS forgets the motion access when the app
+         closes and may only ask during a tap, so the app never asks by itself (an automatic prompt cost the first tap,
+         e.g. "Open your file", and came back on every launch). On the iPhone the switch is a per-visit choice: it opens
+         off, and switching it on asks once for this visit. */
+      const D = window.DeviceOrientationEvent;
+      if (api.isOn('phonetilt')){
+        if (!D || typeof D.requestPermission !== 'function') tiltOn = true;
+        else api.later(() => { if (window.Kit && Kit.setEffect && api.isOn('phonetilt') && !tiltOn) Kit.setEffect('phonetilt', false); }, 0);
+      }
+      api.on(window, 'deviceorientation', e => {
+        if (!tiltOn || !api.isOn('phonetilt') || e.gamma == null || e.beta == null) return;
+        L.tx = Math.max(-1, Math.min(1, e.gamma / 28)); L.ty = Math.max(-1, Math.min(1, (e.beta - 40) / 28)); lastInput = performance.now();
+      });
+
+      api.on(window, 'scroll', () => { dirty = true; }, { passive: true });
+      api.on(window, 'resize', () => { dirty = true; }, { passive: true });
+      function place(){
+        const W = window.innerWidth, H = window.innerHeight, lx = (L.x * .5 + .5) * W, ly = (L.y * .5 + .5) * H;
+        if (api.isOn('caustic')) caustic.style.transform = 'translate3d(' + (L.x * 3.5).toFixed(2) + 'vw,' + (L.y * 2.5).toFixed(2) + 'vh,0)';
+        if (!api.isOn('rim')) return;
+        /* read all positions first, then write: no layout ping-pong */
+        const cards = Array.from(vis).filter(c => c._glint && c.isConnected), rects = cards.map(c => c.getBoundingClientRect());
+        cards.forEach((c, i) => {
+          const r = rects[i], cx = r.width / 2, cy = r.height / 2;
+          let dx = lx - (r.left + cx), dy = ly - (r.top + cy);
+          if (Math.abs(dx) < 1 && Math.abs(dy) < 1) dy = -1;
+          const k = 1 / Math.max(Math.abs(dx) / cx, Math.abs(dy) / cy);
+          c._glint.style.transform = 'translate3d(' + (cx + dx * k).toFixed(1) + 'px,' + (cy + dy * k).toFixed(1) + 'px,0)';
+        });
+      }
+      if (REDUCED){ place(); api.on(window, 'scroll', () => requestAnimationFrame(place), { passive: true }); }
+      else api.loop(now => {
+        if (now - lastInput > 2600){ const t = now / 1000; L.tx = Math.sin(t * .11) * .75; L.ty = Math.cos(t * .083) * .55 - .25; }
+        L.x += (L.tx - L.x) * .06; L.y += (L.ty - L.y) * .06;
+        if (dirty || Math.abs(L.x - px) > .0015 || Math.abs(L.y - py) > .0015){ px = L.x; py = L.y; dirty = false; place(); }
+      });
+
+      /* save beam */
+      api.on(document, 'dl:saved', () => {
+        if (REDUCED || !api.isOn('sweep')) return;
+        const b = h('div', { class: 'save-beam', 'aria-hidden': 'true' }); document.body.appendChild(b); setTimeout(() => b.remove(), 1400);
+      });
+    },
+
+    toggle(id, on){
+      if (id !== 'phonetilt') return;
+      if (!on){ tiltOn = false; lastInput = -1e9; return; }
+      if (tiltOn) return;
+      const D = window.DeviceOrientationEvent;
+      if (D && typeof D.requestPermission === 'function'){
+        D.requestPermission().then(s => { tiltOn = s === 'granted'; if (!tiltOn && API) API.toast('Motion access not allowed', { type: 'info', sub: 'The light keeps drifting on its own.' }); })
+          .catch(() => { if (API) API.toast('Motion access needs a tap on the switch', { type: 'info' }); });
+      } else tiltOn = true;
+    },
+
+    destroy(){
+      tiltOn = false;
+      if (this._io) this._io.disconnect();
+      document.querySelectorAll('.card').forEach(c => { c._glint = null; });
+    }
+  };
+})();
+if (window.DL_THEMES && window.DL_THEMES["prism"]) window.DL_THEMES["prism"].fx = window.THEME_FX;
+delete window.THEME_FX;
+})();
+</script>
+<!-- KIT: Appearance, effects lifecycle, dropdowns, Save to folder -->
+<script id="kit">
+/* =====================================================================
+   DESIGN LAB · KIT
+   The shared runtime a tool includes next to its own logic:
+   - themes: Appearance (max. three looks), device memory, look carried in the data file
+   - effects: lifecycle of each theme's signature-effects module + the tool's own effects,
+     switches remembered per device; whatever an effect adds is removed when the look changes
+   - dropdowns: rounded, themed option menus on computers (native picker on the iPhone)
+   - folder: "Save to folder" (pick once, later saves go straight in), desktop Chrome/Edge
+   The tool keeps its own data logic; the kit never touches the data except settings.theme.
+   ===================================================================== */
+window.Kit = (function(){
+'use strict';
+const root = document.documentElement;
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.prototype.slice.call((r || document).querySelectorAll(s));
+const mq = q => !!(window.matchMedia && window.matchMedia(q).matches);
+const REDUCED = mq('(prefers-reduced-motion: reduce)');
+const TOUCH = mq('(hover:none) and (pointer:coarse)');
+const tok = n => getComputedStyle(root).getPropertyValue(n).trim();
+function h(tag, attrs, kids){
+  const e = document.createElement(tag);
+  for (const a in (attrs || {})){
+    const v = attrs[a];
+    if (v === null || v === undefined || v === false) continue;
+    if (a === 'class') e.className = v;
+    else if (a === 'html') e.innerHTML = v;
+    else if (a === 'style' && typeof v === 'object') Object.assign(e.style, v);
+    else if (a.slice(0, 2) === 'on' && typeof v === 'function') e.addEventListener(a.slice(2), v);
+    else e.setAttribute(a, v === true ? '' : v);
+  }
+  (kids || []).forEach(k => { if (k !== null && k !== undefined && k !== false) e.appendChild(typeof k === 'string' || typeof k === 'number' ? document.createTextNode(String(k)) : k); });
+  return e;
+}
+/* colour helpers for code that has to mix token colours (e.g. a gradient along an arc) */
+function rgb(v){
+  v = String(v || '').trim();
+  let m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(v);
+  if (m){ let x = m[1]; if (x.length === 3) x = x.split('').map(c => c + c).join(''); return [0, 2, 4].map(i => parseInt(x.substr(i, 2), 16)); }
+  m = /rgba?\(([^)]+)\)/.exec(v); if (m) return m[1].split(',').slice(0, 3).map(Number);
+  return [128, 128, 128];
+}
+
+/* ================================================================ themes */
+const THEMES = window.DL_THEMES || {};
+let cfg = null, current = null, T = null, fx = null, fxApi = null, iconLinks = null;
+function themeKey(){ return 'dl.theme.' + cfg.app; }
+function fxKey(){ return 'dl.fx.' + cfg.app; }
+function prefs(){ try { return JSON.parse(localStorage.getItem(fxKey())) || {}; } catch (e){ return {}; } }
+function savePrefs(p){ try { localStorage.setItem(fxKey(), JSON.stringify(p)); } catch (e){} }
+function effects(){ return ((fx && fx.effects) || []).concat(cfg.toolEffects || []); }
+function wanted(e){ const p = prefs(); return p[e.id] === undefined ? !e.off : !!p[e.id]; }
+function isOn(id){ return root.classList.contains('fx-' + id); }
+
+function makeFxApi(){
+  const reg = { alive: true, offs: [], nodes: [], timers: new Set(), obs: [] };
+  const api = {
+    root, REDUCED, TOUCH, $, $$, h, tok, isOn, ambient: () => $('#ambient'), toast: (m, o) => cfg.toast && cfg.toast(m, o),
+    /* a missing target (a tool without that element, e.g. no #tabs) is skipped, never an error */
+    on(t, type, fn, opt){ if (!t) return; t.addEventListener(type, fn, opt); reg.offs.push(() => t.removeEventListener(type, fn, opt)); },
+    add(node, parent){ (parent || $('#ambient')).appendChild(node); reg.nodes.push(node); return node; },
+    /* run fn on every element matching sel, now and whenever the tool draws new ones (pages re-render) */
+    each(sel, fn){
+      const seen = new WeakSet(), run = el => { if (seen.has(el)) return; seen.add(el); try { fn(el); } catch (e){ console.warn(e); } };
+      $$(sel).forEach(run);
+      if (!('MutationObserver' in window)) return;
+      const mo = new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => {
+        if (n.nodeType !== 1) return;
+        if (n.matches && n.matches(sel)) run(n);
+        if (n.querySelectorAll) $$(sel, n).forEach(run);
+      })));
+      mo.observe(document.body, { childList: true, subtree: true });
+      reg.obs.push(mo);
+    },
+    loop(fn){ const tick = now => { if (!reg.alive) return; try { fn(now); } catch (e){ console.warn(e); return; } requestAnimationFrame(tick); }; requestAnimationFrame(tick); },
+    later(fn, ms){ const id = setTimeout(() => { reg.timers.delete(id); if (reg.alive) fn(); }, ms); reg.timers.add(id); return id; },
+    alive: () => reg.alive
+  };
+  api._dispose = () => {
+    reg.alive = false;
+    reg.obs.forEach(o => o.disconnect());
+    reg.offs.forEach(f => { try { f(); } catch (e){} });
+    reg.nodes.forEach(n => n.remove());
+    reg.timers.forEach(clearTimeout);
+  };
+  return api;
+}
+function stopEffects(){
+  if (fx && fx.destroy) try { fx.destroy(); } catch (e){ console.warn(e); }
+  if (fxApi) fxApi._dispose();
+  ((fx && fx.effects) || []).forEach(e => root.classList.remove('fx-' + e.id));
+  const a = $('#ambient'); if (a) a.innerHTML = '';
+  fx = null; fxApi = null;
+}
+function startEffects(mod){
+  fx = mod || null;
+  effects().forEach(e => root.classList.toggle('fx-' + e.id, wanted(e)));
+  if (!fx) return;
+  fxApi = makeFxApi();
+  try { if (fx.init) fx.init(fxApi); }
+  catch (err){
+    /* an effect that fails takes nothing down with it: its classes go, the tool stays as it is */
+    console.warn('Effects module failed, running without it:', err);
+    const broken = fx; stopEffects(); fx = null;
+    broken.effects.forEach(e => root.classList.remove('fx-' + e.id));
+  }
+}
+function setEffect(id, on){
+  const p = prefs(); p[id] = !!on; savePrefs(p);
+  root.classList.toggle('fx-' + id, !!on);
+  if (fx && fx.toggle && (fx.effects || []).some(e => e.id === id)) try { fx.toggle(id, !!on); } catch (e){}
+  if (cfg.onEffect) try { cfg.onEffect(id, !!on); } catch (e){}
+}
+function loadFont(m){
+  if (!m.font || document.querySelector('link[data-font="' + m.id + '"]')) return;
+  document.head.appendChild(h('link', { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=' + m.font + '&display=swap', 'data-font': m.id }));
+}
+function renderIcons(){
+  if (!cfg.icon) return;
+  let n = 0;
+  $$('[data-icon=""], [data-app-icon]').forEach(el => { el.innerHTML = cfg.icon(current, 'ki' + current + (++n)); });
+  try {
+    if (!iconLinks){
+      /* a tool with a fixed home-screen icon ships it as a PNG in <head> (data-fixed): then only the favicon is drawn here */
+      const fixed = $('link[rel="apple-touch-icon"][data-fixed]');
+      iconLinks = { fav: h('link', { rel: 'icon', type: 'image/svg+xml' }), touch: fixed || h('link', { rel: 'apple-touch-icon' }), fixed: !!fixed };
+      document.head.appendChild(iconLinks.fav); if (!fixed) document.head.appendChild(iconLinks.touch);
+    }
+    const svg = cfg.icon(current, 'fav').replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+    iconLinks.fav.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+    /* home screen icon, drawn from the same SVG at 180 px (iOS reads it when you tap Add to Home Screen) */
+    if (iconLinks.fixed) return;
+    const img = new Image();
+    img.onload = () => { try { const c = document.createElement('canvas'); c.width = c.height = 180; c.getContext('2d').drawImage(img, 0, 0, 180, 180); iconLinks.touch.href = c.toDataURL('image/png'); } catch (e){} };
+    img.src = 'data:image/svg+xml,' + encodeURIComponent(svg.replace('viewBox="0 0 100 100"', 'viewBox="0 0 100 100" width="180" height="180"'));
+  } catch (e){}
+}
+function apply(id){
+  const first = current === null;
+  stopEffects();
+  root.setAttribute('data-theme', id);
+  current = id; T = THEMES[id].meta;
+  loadFont(T);
+  const m = $('meta[name=theme-color]'); if (m) m.content = T.color;
+  const sb = $('meta[name=apple-mobile-web-app-status-bar-style]'); if (sb) sb.content = T.scheme === 'light' ? 'default' : 'black-translucent';
+  try { localStorage.setItem(themeKey(), id); } catch (e){}
+  renderIcons();
+  startEffects(THEMES[id].fx);
+  if (cfg.onTheme) try { cfg.onTheme(id, first); } catch (e){ console.error(e); }
+  document.dispatchEvent(new CustomEvent('dl:theme', { detail: id }));
+}
+function set(id, how){
+  if (!THEMES[id] || id === current) return false;
+  const run = () => { try { apply(id); } catch (e){ console.error(e); } };
+  if (REDUCED || current === null || how === 'boot') run();
+  else if (document.startViewTransition){
+    /* the look changed again mid-fade: the browser skips the older transition and rejects its promises. Expected, so swallow it */
+    const vt = document.startViewTransition(run);
+    [vt.ready, vt.finished, vt.updateCallbackDone].forEach(p => { if (p && p.catch) p.catch(() => {}); });
+  }
+  else {
+    const veil = h('div', { class: 'theme-veil', 'aria-hidden': 'true' }); veil.style.background = tok('--bg');
+    document.body.appendChild(veil); run();
+    requestAnimationFrame(() => requestAnimationFrame(() => { veil.classList.add('is-out'); setTimeout(() => veil.remove(), 600); }));
+  }
+  return true;
+}
+function init(o){
+  cfg = o;
+  window.addEventListener('storage', e => { if (e.key === themeKey() && THEMES[e.newValue]) set(e.newValue, 'other'); });
+  let start = root.getAttribute('data-theme');
+  if (!THEMES[start]) start = THEMES[o.defaultTheme] ? o.defaultTheme : Object.keys(THEMES)[0];
+  set(start, 'boot');
+}
+/* the effects module may want to present a figure its own way (Prism's refraction focus) */
+function numberReveal(el, from, to, fmt, done){
+  if (!fx || !fx.numberReveal || !isOn(fx.numberRevealEffect) || REDUCED) return false;
+  try { fx.numberReveal(el, from, to, fmt, done); return true; } catch (e){ return false; }
+}
+
+/* ---------------------------------------------------------------- the Appearance block (theme + effect switches) */
+function segmentedThemes(){
+  const ids = Object.keys(THEMES);
+  const seg = h('div', { class: 'segmented segmented--block', role: 'radiogroup', 'aria-label': 'Theme' }, [h('span', { class: 'segmented__thumb' }, [h('i')])]);
+  seg.style.setProperty('--n', ids.length);
+  const sync = () => {
+    const btns = $$('button', seg), i = Math.max(0, ids.indexOf(current));
+    seg.style.setProperty('--i', i);
+    btns.forEach((b, k) => { b.classList.toggle('is-active', k === i); b.setAttribute('aria-checked', k === i ? 'true' : 'false'); });
+  };
+  ids.forEach(id => seg.appendChild(h('button', { type: 'button', role: 'radio', onclick: () => { if (set(id, 'user')) seg.dispatchEvent(new CustomEvent('dl:seg', { bubbles: true })); } }, [THEMES[id].meta.name])));
+  sync();
+  return { el: seg, sync };
+}
+function appearanceUI(){
+  const seg = segmentedThemes(), list = h('div', { class: 'fxlist' });
+  const drawList = () => {
+    list.innerHTML = '';
+    effects().forEach(e => {
+      const inp = h('input', { type: 'checkbox', checked: isOn(e.id) ? 'checked' : null, 'aria-label': e.name });
+      inp.addEventListener('change', () => setEffect(e.id, inp.checked));
+      list.appendChild(h('div', { class: 'fxitem' }, [
+        h('b', {}, [e.name, h('span', { class: 'tag ' + (e.kind === 'signature' ? 'tag--sig' : 'tag--extra') }, [(e.kind === 'signature' ? 'Signature' : 'Optional extra') + (e.tool ? ' \u00b7 ' + e.tool : '')])]),
+        h('small', {}, [e.desc]),
+        h('label', { class: 'switch switch--sm' }, [inp])
+      ]));
+    });
+  };
+  drawList();
+  const box = h('div', { class: 'appearance-ui' }, [
+    seg.el,
+    h('p', { class: 'note' }, ['This device remembers the look. Your next save also writes it into the data file, so other devices pick it up. Changing it never counts as an unsaved change.']),
+    h('div', { class: 'appearance-ui__fx' }, [h('span', { class: 'row-label' }, ['Effects']), list])
+  ]);
+  const onTheme = () => { if (!box.isConnected){ document.removeEventListener('dl:theme', onTheme); return; } seg.sync(); drawList(); };
+  document.addEventListener('dl:theme', onTheme);
+  return box;
+}
+
+
+/* ---------------------------------------------------------------- the look button: one round button in the top row.
+   It opens a small panel with the three looks (tap one, it applies at once) and, folded away, the effect switches. */
+const PALETTE = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.1 0 1.7-.8 1.7-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7h2a4.1 4.1 0 0 0 4.1-4.1C20.5 6.9 16.7 3.5 12 3.5z"/><circle cx="7.6" cy="11.6" r="1.1" fill="currentColor"/><circle cx="10.6" cy="7.6" r="1.1" fill="currentColor"/><circle cx="15.4" cy="7.9" r="1.1" fill="currentColor"/></svg>';
+function lookButton(){
+  const btn = h('button', { type: 'button', class: 'btn btn--ghost btn--sm btn--icon look-btn', 'aria-label': 'Appearance', title: 'Appearance', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', html: PALETTE });
+  let pop = null, fxOpen = false;
+  function close(focusBack){
+    if (!pop) return;
+    const p = pop; pop = null;
+    p.classList.add('is-closing'); setTimeout(() => p.remove(), 170);
+    btn.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', key); window.removeEventListener('resize', place);
+    document.removeEventListener('dl:theme', draw);
+    if (focusBack) try { btn.focus({ preventScroll: true }); } catch (e){}
+  }
+  function outside(e){ if (pop && !pop.contains(e.target) && !btn.contains(e.target)) close(false); }
+  function key(e){ if (e.key === 'Escape'){ e.preventDefault(); close(true); } }
+  function place(){
+    if (!pop) return;
+    const r = btn.getBoundingClientRect(), w = Math.min(320, window.innerWidth - 16);
+    pop.style.width = w + 'px';
+    pop.style.left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)) + 'px';
+    pop.style.top = (r.bottom + 8) + 'px';
+    pop.style.maxHeight = Math.max(200, window.innerHeight - r.bottom - 20) + 'px';
+  }
+  function draw(){
+    if (!pop) return;
+    pop.innerHTML = '';
+    pop.appendChild(h('div', { class: 'lookmenu__head' }, ['Look']));
+    Object.keys(THEMES).forEach((id, i) => {
+      const m = THEMES[id].meta, on = id === current;
+      pop.appendChild(h('button', { type: 'button', role: 'menuitemradio', 'aria-checked': on ? 'true' : 'false', class: 'lookmenu__opt' + (on ? ' is-on' : ''),
+        onclick: () => { set(id, 'user'); } }, [
+        h('span', { class: 'lookmenu__sw', html: m.icon ? m.icon('lk' + id + i) : '' }),
+        h('span', { class: 'lookmenu__txt' }, [h('b', {}, [m.name]), h('small', {}, [m.mood || ''])]),
+        h('i', { class: 'lookmenu__check', html: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' })
+      ]));
+    });
+    const list = h('div', { class: 'fxlist' });
+    effects().forEach(e => {
+      const inp = h('input', { type: 'checkbox', checked: isOn(e.id) ? 'checked' : null, 'aria-label': e.name });
+      inp.addEventListener('change', () => setEffect(e.id, inp.checked));
+      list.appendChild(h('div', { class: 'fxitem' }, [
+        h('b', {}, [e.name, h('span', { class: 'tag ' + (e.kind === 'signature' ? 'tag--sig' : 'tag--extra') }, [e.kind === 'signature' ? 'Signature' : 'Optional extra'])]),
+        h('small', {}, [e.desc]),
+        h('label', { class: 'switch switch--sm' }, [inp])
+      ]));
+    });
+    const fxBtn = h('button', { type: 'button', class: 'lookmenu__more', 'aria-expanded': fxOpen ? 'true' : 'false' }, [h('span', {}, ['Effects']), h('small', {}, [String(effects().filter(e => isOn(e.id)).length) + ' of ' + effects().length + ' on']), h('i', { class: 'chev' })]);
+    const fxBox = h('div', { class: 'lookmenu__fx', hidden: fxOpen ? null : 'hidden' }, [list]);
+    fxBtn.onclick = () => { fxOpen = !fxOpen; fxBox.hidden = !fxOpen; fxBtn.setAttribute('aria-expanded', fxOpen ? 'true' : 'false'); place(); };
+    pop.appendChild(fxBtn); pop.appendChild(fxBox);
+    pop.appendChild(h('p', { class: 'lookmenu__note' }, ['This device remembers the look; your next save also puts it in the data file. Changing it never counts as an unsaved change.']));
+  }
+  function open(){
+    pop = h('div', { class: 'menu lookmenu', role: 'dialog', 'aria-label': 'Appearance' });
+    document.body.appendChild(pop);
+    draw(); place();
+    btn.setAttribute('aria-expanded', 'true');
+    const cur = pop.querySelector('.lookmenu__opt.is-on'); if (cur) try { cur.focus({ preventScroll: true }); } catch (e){}
+    setTimeout(() => { document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', key); window.addEventListener('resize', place); document.addEventListener('dl:theme', draw); }, 0);
+  }
+  btn.addEventListener('click', () => { if (pop) close(false); else open(); });
+  return btn;
+}
+
+/* ================================================================ dropdowns: rounded, themed menu on computers */
+function initDropdowns(selector){
+  if (TOUCH) return;
+  const SEL = selector || 'select.select';
+  let open = null;
+  const check = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  function close(focusBack){
+    if (!open) return;
+    const o = open; open = null;
+    o.menu.classList.add('is-closing'); setTimeout(() => o.menu.remove(), 170);
+    o.sel.classList.remove('is-open');
+    document.removeEventListener('pointerdown', outside, true); window.removeEventListener('resize', closeNow); window.removeEventListener('scroll', onScroll, true);
+    if (focusBack) try { o.sel.focus({ preventScroll: true }); } catch (e){}
+  }
+  const closeNow = () => close(false);
+  function onScroll(e){ if (open && !open.menu.contains(e.target)) close(false); }
+  function outside(e){ if (open && !open.menu.contains(e.target) && e.target !== open.sel) close(false); }
+  function show(sel){
+    if (open){ const same = open.sel === sel; close(false); if (same) return; }
+    const r = sel.getBoundingClientRect();
+    const menu = h('div', { class: 'menu', role: 'listbox', 'aria-label': sel.getAttribute('aria-label') || sel.name || 'Options' });
+    const pick = i => {
+      if (sel.selectedIndex !== i){ sel.selectedIndex = i; sel.dispatchEvent(new Event('input', { bubbles: true })); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+      close(true);
+    };
+    Array.prototype.forEach.call(sel.options, (o, i) => {
+      menu.appendChild(h('button', { type: 'button', role: 'option', class: 'menu__item' + (o.selected ? ' is-selected' : ''), 'aria-selected': o.selected ? 'true' : 'false',
+        disabled: o.disabled ? 'disabled' : null, onclick: () => pick(i) }, [h('span', {}, [o.textContent]), h('i', { html: check })]));
+    });
+    document.body.appendChild(menu);
+    const below = window.innerHeight - r.bottom - 12, need = Math.min(menu.scrollHeight, 320), up = below < Math.min(need, 220) && r.top > below;
+    menu.style.minWidth = r.width + 'px';
+    menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8)) + 'px';
+    if (up){ menu.classList.add('is-up'); menu.style.bottom = (window.innerHeight - r.top + 6) + 'px'; menu.style.maxHeight = Math.min(320, r.top - 12) + 'px'; }
+    else { menu.style.top = (r.bottom + 6) + 'px'; menu.style.maxHeight = Math.min(320, below) + 'px'; }
+    const cur = menu.children[sel.selectedIndex];
+    if (cur){ cur.scrollIntoView({ block: 'nearest' }); try { cur.focus({ preventScroll: true }); } catch (e){} }
+    menu.addEventListener('keydown', e => {
+      const items = $$('.menu__item:not([disabled])', menu), k = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); const n = items[Math.max(0, Math.min(items.length - 1, k + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) n.focus(); }
+      else if (e.key === 'Home' || e.key === 'End'){ e.preventDefault(); const n = items[e.key === 'Home' ? 0 : items.length - 1]; if (n) n.focus(); }
+      else if (e.key === 'Escape' || e.key === 'Tab'){ e.preventDefault(); e.stopPropagation(); close(true); }
+      else if (e.key.length === 1 && /\S/.test(e.key)){
+        const c = e.key.toLowerCase(), starts = b => b.textContent.trim().toLowerCase().indexOf(c) === 0;
+        const n = items.find((b, j) => j > k && starts(b)) || items.find(starts); if (n) n.focus();
+      }
+    });
+    sel.classList.add('is-open');
+    open = { sel, menu };
+    setTimeout(() => { document.addEventListener('pointerdown', outside, true); window.addEventListener('resize', closeNow); window.addEventListener('scroll', onScroll, true); }, 0);
+  }
+  document.addEventListener('mousedown', e => {
+    const s = e.target.closest && e.target.closest(SEL);
+    if (!s || e.button !== 0 || s.disabled) return;
+    e.preventDefault(); try { s.focus({ preventScroll: true }); } catch (er){} show(s);
+  });
+  document.addEventListener('keydown', e => {
+    const s = e.target;
+    if (!(s instanceof HTMLSelectElement) || !s.matches(SEL)) return;
+    if (e.key === ' ' || e.key === 'Enter' || e.key === 'F4' || (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp'))){ e.preventDefault(); show(s); }
+  });
+}
+
+/* ================================================================ Save to folder: pick once, later saves go straight in */
+const folder = (function(){
+  const can = typeof window.showDirectoryPicker === 'function' && !TOUCH;
+  let handle = null;
+  function idb(){ return new Promise((ok, no) => { const r = indexedDB.open('dl-' + cfg.app, 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); }
+  async function get(){ if (!can) return null; if (handle) return handle; try { const db = await idb(); handle = await new Promise(ok => { const t = db.transaction('kv').objectStore('kv').get('folder'); t.onsuccess = () => ok(t.result || null); t.onerror = () => ok(null); }); } catch (e){ handle = null; } return handle; }
+  async function choose(){
+    const opt = { id: 'dl-' + cfg.app, mode: 'readwrite' }, prev = await get();
+    if (prev) opt.startIn = prev;
+    handle = await window.showDirectoryPicker(opt);
+    try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').put(handle, 'folder'); } catch (e){}
+    return handle;
+  }
+  /* writes name into the chosen folder; null when there is no folder or no access (the caller then falls back) */
+  async function write(name, blob){
+    const f = await get(); if (!f) return null;
+    try {
+      if (f.queryPermission && await f.queryPermission({ mode: 'readwrite' }) !== 'granted' && (await f.requestPermission({ mode: 'readwrite' })) !== 'granted') return null;
+      const fh = await f.getFileHandle(name, { create: true }), w = await fh.createWritable(); await w.write(blob); await w.close();
+      return { name, folder: f.name };
+    } catch (e){ return null; }
+  }
+  return { can, get, choose, write };
+})();
+
+return { themeSwitch: segmentedThemes, lookButton, init, set, theme: () => current, themes: () => Object.keys(THEMES), meta: id => (THEMES[id || current] || {}).meta, isOn, setEffect, numberReveal,
+  appearanceUI, initDropdowns, folder, tok, rgb, REDUCED, TOUCH };
+})();
+</script>

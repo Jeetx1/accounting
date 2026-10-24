@@ -9,9 +9,12 @@ private/
 *.tsv
 *.pdf
 *ACCOUNTING*.html
+*_EVEN.html
 *ACCOUNTING*.json
 *BACKUP*
 node_modules/
+package-lock.json
+tests/shots/
 .DS_Store
 Thumbs.db
 desktop.ini

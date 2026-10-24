@@ -1,7 +1,7 @@
 {
-  "name": "accounting",
+  "name": "even",
   "private": true,
-  "description": "Personal double-entry accounting: a single-file HTML app with its data in a separate .json file.",
+  "description": "EVEN: personal double-entry accounting, a single-file HTML app with its data in a separate .json file.",
   "scripts": {
     "build": "./build.sh",
     "test": "./run_tests.sh"

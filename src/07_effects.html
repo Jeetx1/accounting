@@ -1,0 +1,13 @@
+<!-- EVEN · app effects (The stamp), scoped to html.fx-* -->
+<style id="tool-effects">
+/* =====================================================================
+   EVEN · tool effects, the same in every theme (each theme colours them through its tool tokens).
+   THE STAMP (signature, html.fx-stamp): a posted booking gets a seal: a ring of guilloché turns once, "Booked" lands.
+   Pure decoration: switched off, the tool is the same. (Ledger lines were dropped on 24.10.2026: owner's decision.)
+   ===================================================================== */
+html:not(.fx-stamp) .siegel{display:none}
+.siegel .ring{transform-origin:100px 100px}
+.siegel.los .ring{animation:sealTurn 1.25s linear both}
+@keyframes sealTurn{to{transform:rotate(36deg)}}
+@media (prefers-reduced-motion:reduce){ .siegel.los .ring{animation:none} }
+</style>

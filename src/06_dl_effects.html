@@ -1,0 +1,183 @@
+<!-- DESIGN LAB kit, copied from APPS/01 DESIGN LAB/02 Build Kit FINAL/common. Never edit here: refresh with 01 READ FIRST/tools/dl_sync.py -->
+<!-- SIGNATURE EFFECTS of the three looks, scoped to html.fx-* -->
+<style id="effects">
+/* GLASS · signature effects. Everything here hangs off an html.fx-* class; remove the class and the effect is gone. */
+
+/* signature · drifting light: one slow layer of soft light under the glass (v2: brighter, wider, a touch livelier) */
+.ambient .orb{position:absolute;border-radius:50%;filter:blur(70px);will-change:transform;opacity:0;transition:opacity 1.2s ease}
+html.fx-light .ambient .orb{opacity:var(--o)}
+.ambient .orb.a{--o:.72;width:66vmax;height:66vmax;left:-18vmax;top:-22vmax;background:radial-gradient(circle at 40% 40%,#3570AD,rgba(53,112,173,0) 66%);animation:glassDrift1 34s ease-in-out infinite alternate}
+.ambient .orb.b{--o:.55;width:56vmax;height:56vmax;right:-20vmax;top:12vh;background:radial-gradient(circle,#1F6E7E,rgba(31,110,126,0) 64%);animation:glassDrift2 42s ease-in-out infinite alternate}
+.ambient .orb.c{--o:.46;width:50vmax;height:50vmax;left:18vw;bottom:-30vmax;background:radial-gradient(circle,#4A4FA6,rgba(74,79,166,0) 62%);animation:glassDrift3 48s ease-in-out infinite alternate}
+@keyframes glassDrift1{50%{transform:translate3d(8vw,16vh,0) scale(1.06)}100%{transform:translate3d(18vw,6vh,0) scale(1.18)}}
+@keyframes glassDrift2{50%{transform:translate3d(-6vw,22vh,0) scale(1.08)}100%{transform:translate3d(-16vw,10vh,0) scale(.9)}}
+@keyframes glassDrift3{50%{transform:translate3d(14vw,-8vh,0) scale(.94)}100%{transform:translate3d(6vw,-18vh,0) scale(1.14)}}
+
+/* signature · depth stack: when a dialog or sheet opens, the page behind sinks back, then floats forward again (v2: deeper) */
+html.fx-depth main.wrap{transition:transform .7s var(--glass-jelly),opacity .45s var(--ease)}
+html.fx-depth main.wrap.is-receded{transform:scale(.93) translate3d(0,14px,0);opacity:.6}
+
+/* signature · liquid pill: the tab pill and segment thumb stretch while they travel, then wobble into place (v2: more stretch, jellier settle) */
+html.fx-liquid .tabs__indicator i{transition:transform .6s var(--glass-jelly)}
+html.fx-liquid .tabs__indicator i.is-moving{transform:scaleX(1.32) scaleY(.76);transition-duration:.14s}
+html.fx-liquid .segmented__thumb{background:transparent;box-shadow:none}
+.segmented__thumb > i{display:none}
+html.fx-liquid .segmented__thumb > i{display:block;position:absolute;inset:0;border-radius:inherit;background:var(--seg-active-bg);box-shadow:var(--seg-active-shadow);transition:transform .6s var(--glass-jelly)}
+html.fx-liquid .segmented__thumb > i.is-moving{transform:scaleX(1.3) scaleY(.74);transition-duration:.14s}
+
+/* signature · float: tiles lift towards you on hover, press in under your finger and spring back, and rise into place as you scroll */
+html.fx-float .card.is-float{transition:transform .65s var(--glass-jelly)}
+html.fx-float .card.is-float::after{content:"";position:absolute;inset:calc(var(--bw) * -1);border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .45s var(--ease);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 0 0 1px rgba(170,205,245,.2),0 34px 70px -30px rgba(0,0,0,.95),0 0 46px -14px rgba(125,177,230,.4)}
+@media (hover:hover) and (pointer:fine){
+  html.fx-float .card.is-float:hover{transform:translate3d(0,-5px,0)}
+  html.fx-float .card.is-float:hover::after{opacity:1}
+}
+html.fx-float .card.is-float.is-pressed{transform:scale(.972) translate3d(0,1px,0)!important;transition-duration:.2s;transition-timing-function:var(--ease)}
+html.fx-float .card.is-float.is-pressed::after{opacity:.7}
+html.fx-float .card.is-rise{opacity:0;transform:translate3d(0,26px,0) scale(.97)}
+html.fx-float .card.is-rising{transition:transform .9s var(--glass-jelly),opacity .6s var(--ease)}
+
+/* signature · frost glint: the KPI light sheds a little frost as it travels, lands with a glint, and the end point keeps a quiet glow */
+.spark .gdot,.spark .gl,.spark .ghead{display:none}
+html.fx-frost .spark .gdot,html.fx-frost .spark .gl,html.fx-frost .spark .ghead{display:inline}
+.spark .gdot{opacity:0;transition:opacity .5s ease;pointer-events:none}
+.spark .gdot.is-on{opacity:1}
+.spark .gdot__halo{fill:var(--spark-trail);opacity:.16}
+.spark .gdot__core{fill:var(--spark-head);filter:drop-shadow(0 0 2px var(--spark-trail)) drop-shadow(0 0 5px var(--spark-trail))}
+.spark .gdot__star,.spark .ghead polygon{fill:var(--spark-head)}
+.spark .gdot__star{opacity:0;transform-box:fill-box;transform-origin:center;transform:scale(.2)}
+.spark .gdot__halo{transform-box:fill-box;transform-origin:center}
+.spark .gdot.is-twinkle .gdot__star{animation:glassStar 1.1s cubic-bezier(.2,.8,.2,1)}
+.spark .gdot.is-twinkle .gdot__halo{animation:glassHalo 1.1s ease-out}
+@keyframes glassStar{0%{opacity:0;transform:scale(.2) rotate(0)}25%{opacity:1;transform:scale(1.15) rotate(30deg)}100%{opacity:0;transform:scale(.4) rotate(70deg)}}
+@keyframes glassHalo{0%{opacity:.16;transform:scale(1)}30%{opacity:.4;transform:scale(1.9)}100%{opacity:.16;transform:scale(1)}}
+.spark .gl{fill:var(--spark-head);transform-box:fill-box;transform-origin:center;opacity:0;animation:glassGlint .9s ease-out forwards;filter:drop-shadow(0 0 2px var(--spark-trail))}
+@keyframes glassGlint{0%{opacity:0;transform:translate(0,0) scale(.3)}20%{opacity:.95;transform:translate(0,-1px) scale(1.2)}100%{opacity:0;transform:translate(0,-6px) scale(.2)}}
+.spark .ghead{opacity:0;transition:opacity .25s}
+.spark.is-running .ghead.is-on{opacity:.85}
+.spark .ghead polygon{transform-box:fill-box;transform-origin:center;animation:glassSpin 1.4s linear infinite}
+@keyframes glassSpin{to{transform:rotate(90deg)}}
+
+/* optional extra · depth tilt: KPI cards lean towards the pointer, and the figure floats above the glass (v2: stronger, with parallax) */
+html.fx-tilt .kpi{transition:transform .65s var(--glass-jelly)}
+html.fx-tilt .kpi.is-tilting{transition:transform .12s linear}
+html.fx-tilt .kpi .kpi__value,html.fx-tilt .kpi .spark{transition:transform .65s var(--glass-jelly)}
+html.fx-tilt .kpi.is-tilting .kpi__value{transform:translate3d(calc(var(--gx,0) * 7px),calc(var(--gy,0) * 5px),0);transition:transform .12s linear}
+html.fx-tilt .kpi.is-tilting .spark{transform:translate3d(calc(var(--gx,0) * 3px),calc(var(--gy,0) * 2px),0);transition:transform .12s linear}
+
+@media (prefers-reduced-motion:reduce){
+  .ambient .orb{animation:none!important}
+  .tabs__indicator i.is-moving,.segmented__thumb > i.is-moving{transform:none!important}
+  html.fx-tilt .kpi,html.fx-tilt .kpi .kpi__value,html.fx-tilt .kpi .spark{transform:none!important}
+  html.fx-depth main.wrap.is-receded{transform:none!important}
+  html.fx-float .card.is-float,html.fx-float .card.is-float:hover,html.fx-float .card.is-float.is-pressed{transform:none!important}
+  html.fx-float .card.is-rise{opacity:1;transform:none}
+  .spark .gl,.spark .ghead{display:none!important}
+  .spark .gdot__star,.spark .gdot__halo{animation:none!important}
+}
+
+/* EMBER · signature effects. Everything here hangs off an html.fx-* class; remove the class and the effect is gone. */
+
+/* signature · ember glow: one bed of embers at the bottom of the screen that slowly breathes */
+.ambient .embers{position:absolute;left:50%;bottom:-38vh;width:140vw;height:70vh;margin-left:-70vw;border-radius:50%;opacity:0;will-change:transform,opacity;
+  background:radial-gradient(closest-side,rgba(255,96,32,.42),rgba(255,64,20,.16) 55%,rgba(255,64,20,0) 100%);transition:opacity 1.2s ease}
+.ambient .embers::after{content:"";position:absolute;inset:25% 30%;border-radius:50%;background:radial-gradient(closest-side,rgba(255,190,90,.35),rgba(255,190,90,0));animation:emberCore 6.5s ease-in-out infinite alternate}
+html.fx-glow .ambient .embers{opacity:1;animation:emberBreathe 11s ease-in-out infinite alternate}
+@keyframes emberBreathe{0%{transform:scale(1) translateY(0);opacity:.75}100%{transform:scale(1.08) translateY(-2vh);opacity:1}}
+@keyframes emberCore{0%{opacity:.4;transform:translateX(-4%)}100%{opacity:1;transform:translateX(5%)}}
+
+/* optional extra · sparks: a handful of sparks drifting up, slowly */
+.ambient .spark{position:absolute;bottom:-12px;width:3px;height:3px;border-radius:50%;background:#FFB15C;box-shadow:0 0 6px 1px rgba(255,140,60,.8);opacity:0;will-change:transform,opacity}
+html.fx-sparks .ambient .spark{animation:sparkRise var(--t,12s) linear infinite;animation-delay:var(--d,0s)}
+@keyframes sparkRise{
+  0%{opacity:0;transform:translate3d(0,0,0) scale(1)}
+  8%{opacity:.9}
+  60%{opacity:.55}
+  100%{opacity:0;transform:translate3d(var(--x,20px),-78vh,0) scale(.4)}
+}
+
+/* signature · strike: hard press feedback and a molten sheen across primary buttons */
+.strike{position:absolute;z-index:-1;left:0;top:0;width:180px;height:180px;margin:-90px 0 0 -90px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,220,170,.55),rgba(255,140,60,.25) 40%,rgba(255,120,40,0) 70%);transform:scale(0);opacity:1;animation:strike .55s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes strike{to{transform:scale(1.6);opacity:0}}
+html.fx-strike .chip--filter,html.fx-strike .segmented button{position:relative;overflow:hidden;isolation:isolate}
+html.fx-strike .btn--primary:not(.is-loading)::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(105deg,rgba(255,240,200,0) 30%,rgba(255,240,200,.5) 50%,rgba(255,240,200,0) 70%);transform:translateX(-130%)}
+html.fx-strike .btn--primary:not(.is-loading):hover::before{transform:translateX(130%);transition:transform .75s cubic-bezier(.2,.8,.2,1)}
+html.fx-strike .btn--primary,html.fx-strike .btn--danger{transition:transform .32s var(--ease-spring),opacity var(--dur-fast)}
+
+/* signature · heat-up: KPI cards carry a live ember edge; numbers flare as they land */
+.kpi .edge{position:absolute;left:18px;right:18px;top:-1px;height:2px;overflow:hidden;border-radius:2px;pointer-events:none;opacity:0;transition:opacity .6s}
+.kpi .edge i{position:absolute;top:0;bottom:0;left:0;width:200%;background:linear-gradient(90deg,rgba(255,90,31,0),#FF5A1F 15%,#FFC24A 30%,rgba(255,90,31,0) 45%,rgba(255,90,31,0) 50%,#FF5A1F 65%,#FFC24A 80%,rgba(255,90,31,0) 95%);animation:edgeFlow 5s linear infinite}
+html.fx-heat .kpi .edge{opacity:1}
+@keyframes edgeFlow{to{transform:translateX(-50%)}}
+.kpi .flare{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;
+  background:radial-gradient(90% 70% at 30% 0%,rgba(255,110,40,.22),rgba(255,110,40,0) 70%)}
+html.fx-heat .kpi.is-flaring .flare{animation:flare 1.3s ease-out}
+@keyframes flare{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
+html.fx-heat .kpi__value b{text-shadow:0 0 28px rgba(255,106,43,.35)}
+
+@media (prefers-reduced-motion:reduce){
+  .ambient .embers,.ambient .embers::after,.kpi .edge i{animation:none!important}
+  html.fx-sparks .ambient .spark{animation:none!important;opacity:0}
+  .strike{animation:none!important;opacity:0}
+  html.fx-strike .btn--primary::before{transition:none!important}
+}
+
+/* PRISM · signature effects. Everything here hangs off an html.fx-* class; remove the class and the effect is gone.
+   One shared light source drives all of them: the pointer on a computer, a slow drift (or the phone's tilt) elsewhere. */
+
+/* signature · caustic light: rainbow light on the wall, as if the sun came through a crystal. The only ambient element. */
+.caustic{position:absolute;inset:-12%;opacity:0;transition:opacity 1.6s ease;will-change:transform}
+html.fx-caustic .caustic{opacity:1}
+.caustic i{position:absolute;display:block;will-change:transform}
+.caustic .glow{width:74vmax;height:74vmax;left:34%;top:-34%;border-radius:50%;filter:blur(64px);opacity:.75;
+  background:conic-gradient(from 0deg,rgba(110,86,255,.26),rgba(22,178,227,.22),rgba(31,199,150,.18),rgba(255,170,46,.2),rgba(255,92,138,.24),rgba(110,86,255,.26));
+  animation:prismTurn 160s linear infinite}
+.caustic .band{left:-20%;width:140%;height:7vmax;filter:blur(14px);border-radius:50%;
+  background:linear-gradient(180deg,rgba(110,86,255,0),rgba(110,86,255,.2) 18%,rgba(22,178,227,.2) 36%,rgba(31,199,150,.16) 52%,rgba(255,170,46,.18) 68%,rgba(255,92,138,.2) 84%,rgba(255,92,138,0))}
+.caustic .b1{top:26%;transform:rotate(-17deg);animation:prismBand1 46s ease-in-out infinite alternate}
+.caustic .b2{top:62%;height:4.5vmax;opacity:.75;transform:rotate(-11deg);animation:prismBand2 58s ease-in-out infinite alternate}
+@keyframes prismTurn{to{transform:rotate(360deg)}}
+@keyframes prismBand1{from{transform:translate3d(-4vw,-2vh,0) rotate(-17deg)}to{transform:translate3d(6vw,4vh,0) rotate(-13deg)}}
+@keyframes prismBand2{from{transform:translate3d(5vw,2vh,0) rotate(-11deg)}to{transform:translate3d(-6vw,-3vh,0) rotate(-15deg)}}
+
+/* signature · spectral edge: every panel has a hairline of split light, and a glint sits on the edge facing the light */
+.rim{position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;pointer-events:none;overflow:hidden;opacity:0;transition:opacity .8s ease;
+  background:conic-gradient(from 200deg,rgba(110,86,255,.3),rgba(22,178,227,.28),rgba(31,199,150,.22),rgba(255,170,46,.24),rgba(255,92,138,.3),rgba(110,86,255,.3));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+html.fx-rim .rim{opacity:1}
+.rim i{position:absolute;left:0;top:0;width:280px;height:280px;margin:-140px 0 0 -140px;border-radius:50%;will-change:transform;
+  background:radial-gradient(circle,#FFFFFF 0%,rgba(255,255,255,.95) 7%,rgba(22,178,227,.95) 18%,rgba(110,86,255,.85) 31%,rgba(255,92,138,.55) 46%,rgba(255,170,46,0) 66%)}
+html.fx-rim .btn--primary:not(.is-loading)::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(105deg,rgba(255,255,255,0) 32%,rgba(255,255,255,.95) 50%,rgba(255,255,255,0) 68%);transform:translateX(-130%)}
+html.fx-rim .btn--primary:not(.is-loading):hover::before{transform:translateX(130%);transition:transform .9s var(--ease)}
+html.fx-rim .eyebrow,html.fx-rim .hero__title{background:linear-gradient(95deg,#5B48F5 0%,#1690C7 45%,#D9346E 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+html.fx-rim .hero__title{background:linear-gradient(100deg,#2D1FB8 0%,#5B48F5 30%,#1690C7 60%,#C92C66 100%);-webkit-background-clip:text;background-clip:text}
+
+/* signature · refraction focus: figures arrive split into colour, then snap into focus */
+.refr{position:relative;display:inline-block}
+.refr__main{display:inline-block;animation:refrMain 1s var(--ease) both}
+.refr__g{position:absolute;left:0;top:0;pointer-events:none;mix-blend-mode:multiply;animation:refrGhost 1s var(--ease) both}
+.refr__g--a{color:#6E56FF;--rx:-16px;--ry:-3px}
+.refr__g--b{color:#16B2E3;--rx:14px;--ry:4px}
+.refr__g--c{color:#FF5C8A;--rx:4px;--ry:-9px}
+@keyframes refrGhost{0%{opacity:0;transform:translate(var(--rx),var(--ry))}22%{opacity:.85}100%{opacity:0;transform:none}}
+@keyframes refrMain{0%,40%{opacity:0;transform:scale(1.03)}100%{opacity:1;transform:none}}
+
+/* optional extra · save beam: a thin beam of spectrum crosses the screen when a save succeeds */
+.save-beam{position:fixed;inset:0;z-index:150;pointer-events:none;overflow:hidden}
+.save-beam::before{content:"";position:absolute;top:-10%;bottom:-10%;left:0;width:30vw;transform:translateX(-45vw) skewX(-18deg);
+  background:linear-gradient(90deg,rgba(110,86,255,0),rgba(110,86,255,.16) 25%,rgba(22,178,227,.2) 42%,rgba(255,255,255,.75) 50%,rgba(31,199,150,.18) 58%,rgba(255,170,46,.16) 72%,rgba(255,92,138,0));
+  animation:saveBeam 1.25s cubic-bezier(.35,.05,.25,1) forwards}
+@keyframes saveBeam{to{transform:translateX(130vw) skewX(-18deg)}}
+
+@media (prefers-reduced-motion:reduce){
+  .caustic i{animation:none!important}
+  .refr__g{display:none}
+  .refr__main{animation:fadeIn .3s ease both!important}
+  .save-beam{display:none}
+}
+</style>

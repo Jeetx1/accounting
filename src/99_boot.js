@@ -27,8 +27,13 @@ $("#vergleich").onchange = async e=>{
   if(v === "datei" && !vgl){ const ok = await vergleichsdateiLaden(); state.ui.vergleich = ok ? "datei" : ""; bauVergleichsliste(); render(); return; }
   state.ui.vergleich = v; render();
 };
-$("#bPer").onclick = ()=>{ state.ui.ytd = false; $("#bPer").classList.add("on"); $("#bYtd").classList.remove("on"); render(); };
-$("#bYtd").onclick = ()=>{ state.ui.ytd = true; $("#bYtd").classList.add("on"); $("#bPer").classList.remove("on"); render(); };
+function bereich(ytd, still){
+  const s = $("#rangeSeg"); s.style.setProperty("--i", ytd ? 1 : 0);
+  [["#bPer", !ytd], ["#bYtd", ytd]].forEach(([id, an])=>{ $(id).classList.toggle("on", an); $(id).classList.toggle("is-active", an); $(id).setAttribute("aria-checked", an ? "true" : "false"); });
+  if(!still) s.dispatchEvent(new CustomEvent("dl:seg", {bubbles:true}));
+}
+$("#bPer").onclick = ()=>{ if(!state.ui.ytd) return; state.ui.ytd = false; bereich(false); render(); };
+$("#bYtd").onclick = ()=>{ if(state.ui.ytd) return; state.ui.ytd = true; bereich(true); render(); };
 let sucheTimer = null;
 $("#jo-suche").addEventListener("input", e=>{ clearTimeout(sucheTimer); sucheTimer = setTimeout(()=>{ suche = e.target.value.trim(); renderJournal(); }, 140); });
 $("#jo-auf").onclick = ()=> $$("#jo-liste details").forEach(d=>d.open=true);
@@ -71,9 +76,25 @@ document.addEventListener("keydown", e=>{
   else if(mod && e.key === "Enter" && state.ui.tab === "buchen"){ e.preventDefault(); versucheBuchen(); }
 });
 
+Kit.init({
+  app: "accounting", defaultTheme: "glass", icon: (theme, u) => APP_ICONS.even(u).replace("<svg ", '<svg width="100%" height="100%" '),
+  toolEffects: [
+    { id: "stamp", kind: "signature", tool: "EVEN", name: "The stamp", desc: "A posted booking gets a seal: a ring of guilloché turns once and “Booked” lands on the booking mask." }
+  ],
+  /* a new look: the page and its charts are drawn again with the new colours */
+  onTheme: (id, first) => { if(!first && geladen){ try{ render(); }catch(e){ console.error(e); } } },
+  toast: (m, o) => meldung(m, {fehler: !!(o && o.type === "error")})
+});
+Kit.initDropdowns("select.eingabe, .ctl select");
+{ const lb = Kit.lookButton(); lb.id = "look"; $("#lookSlot").replaceWith(lb); }
+{ const look = $("#startLook"); if(look){ const sw = Kit.themeSwitch(); look.appendChild(sw.el); document.addEventListener("dl:theme", sw.sync); } }
+/* the tool's dialogs open and close by a class: tell the effects (Glass sinks the page back behind them) */
+if("MutationObserver" in window) $$(".hg").forEach(hgEl=>{ let war = hgEl.classList.contains("on");
+  new MutationObserver(()=>{ const ist = hgEl.classList.contains("on"); if(ist !== war){ war = ist; document.dispatchEvent(new CustomEvent("dl:overlay", {detail:{open:ist}})); } }).observe(hgEl, {attributes:true, attributeFilter:["class"]}); });
+if(location.protocol === "https:") document.head.appendChild(Object.assign(document.createElement("link"), {rel:"manifest", href:"manifest.webmanifest"}));
+{ const bz = $("#buildzeile"); if(bz) bz.textContent = "EVEN \u00b7 build " + ((document.querySelector('meta[name="build"]') || {}).content || "local"); }
 setzeIcons();
 baueMarkeUndSiegel();
-zeichneHintergrund();
 $("#start-hinweis").textContent = FSA
   ? "Saving writes straight back into the opened file. Ctrl+S saves, Ctrl+Z undoes."
   : "This browser cannot write back into the opened file. Saving creates a new file each time (on iPhone in Files). To save into the same file, use Chrome or Edge on a computer.";

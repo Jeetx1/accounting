@@ -22,15 +22,14 @@ function renderSachanlagen(){
   const aktiv = ue.anlagen.filter(x=> !x.abgegangen && x.kosten > 0);
   const jahresAufwand = E.r2(reihe.reduce((s, r)=> s + r.aufwand, 0));
   const gesamt = Math.max(ue.total.buchwert, 1);
-  const farben = ["#1F3F66","#2F5E91","#4A7DB5","#7FA3CC","#627A94","#8FA6BF","#3D5A80","#98AEC8"];
-  const bloecke = aktiv.length ? aktiv.sort((a,b)=> b.buchwert - a.buchwert).map((x, i)=>{
-    const w = Math.max(0, x.buchwert), anteil = w/gesamt; if(w < .005) return "";
-    return `<div class="bb-block${anteil<.17?" klein":""}" style="flex:${w} 1 0;background:${farben[i % farben.length]}" data-tip="${esc(`<b>${esc(x.anlage.text)}</b>`+tipZeile("Cost", fz(x.kosten))+tipZeile("Depreciated", fz(x.gebucht))+tipZeile("Net book value", fz(x.buchwert))+tipZeile("Monthly charge", fz(x.monatlich)))}">
-      <span>${esc(x.anlage.text)}</span><b>${fk(x.buchwert)}</b></div>`; }).join("") : `<div class="mut klein" style="padding:20px 0">No asset in the register yet.</div>`;
+  const saTeile = aktiv.filter(x=> x.buchwert > .005).sort((a,b)=> b.buchwert - a.buchwert), saTotal = E.r2(saTeile.reduce((s2, x)=> s2 + x.buchwert, 0));
+  const saBild = saTeile.length ? `<div class="donut"><svg id="saDonut" viewBox="0 0 220 220" role="img" aria-label="Net book value by asset">${donutRing(saTeile.map(x=>({wert:x.buchwert,
+      tip:`<b>${esc(x.anlage.text)}</b>`+tipZeile("Cost", fz(x.kosten))+tipZeile("Depreciated", fz(x.gebucht))+tipZeile("Net book value", fz(x.buchwert))+tipZeile("Monthly charge", fz(x.monatlich))})), "Net book value", fk(saTotal))}</svg>
+    <div class="donut-liste" id="saDonutListe">${saTeile.map((x, i)=>`<div class="z" data-i="${i}"><i style="background:${DONUT_FARBEN[i % DONUT_FARBEN.length]}"></i><span class="t">${esc(x.anlage.text)}</span>
+      <span class="num">${fz(x.buchwert)}</span><span class="num mut">${(x.buchwert/saTotal*100).toFixed(1)}%</span></div>`).join("")}</div></div>`
+    : `<div class="mut klein" style="padding:20px 0">No asset in the register yet.</div>`;
   $("#sa-held").innerHTML = `<div class="held">
-    <div><div class="bilanzbild" style="grid-template-columns:1fr">
-      <div class="bb-spalte"><div class="bb-kopf"><span>Net book value by asset</span><span>${fk(ue.total.buchwert)}</span></div>${bloecke}</div>
-    </div></div>
+    <div><div class="bb-kopf"><span>Net book value by asset</span><span>${fk(ue.total.buchwert)}</span></div>${saBild}</div>
     <div>
       <div class="kennwert"><div class="l">Net book value at ${fd(heuteBis)}</div><div class="v">${fz(ue.total.buchwert)}</div><div class="linie"></div></div>
       <div class="kenngitter">
@@ -40,6 +39,7 @@ function renderSachanlagen(){
         <div><div class="l">Residual values</div><div class="v">${fz(aktiv.reduce((s, x)=> s + x.anlage.restwert, 0))}</div></div>
       </div>
     </div></div>`;
+  donutHell("saDonut", "saDonutListe"); donutEin($("#saDonut"));
   const naechstes = E.anlagenJahresreihe(state, ix, state.jahr+1).reduce((s, r)=> s + r.aufwand, 0);
   const fort = istGeschlossen(state.jahr) ? {bookings:[], anlagen:[]} : E.anlagenFortfuehren(state, ix, state.jahr);
   $("#sa-leiste").innerHTML = [
@@ -268,7 +268,22 @@ function renderUeberJahre(){
   fsDonut(K);
 }
 // doughnut of the investments ticked under Statement settings
-const DONUT_FARBEN = ["#1F3F66","#2F5E91","#4A7DB5","#7FA3CC","#A9BDD6","#627A94","#8FA6BF","#C7D6EA","#3D5A80","#98AEC8"];
+const DONUT_FARBEN = [1,2,3,4,5,6,7,8,9,10].map(i=> "var(--ev-d"+i+")");
+function donutRing(teile, titel, wert){
+  const total = teile.reduce((s2, x)=> s2 + x.wert, 0) || 1, r = 84, u = 2*Math.PI*r; let lauf = 0;
+  return `<circle cx="110" cy="110" r="${r}" fill="none" stroke="var(--papier2)" stroke-width="26"/><g class="dreh">`+
+    teile.map((x, i)=>{ const l = x.wert/total*u, gap = teile.length > 1 ? Math.min(2, l/3) : 0;
+      const seg = `<circle class="seg" data-i="${i}" cx="110" cy="110" r="${r}" fill="none" style="stroke:${DONUT_FARBEN[i % DONUT_FARBEN.length]}" stroke-width="26"
+        stroke-dasharray="${(l-gap).toFixed(2)} ${(u-l+gap).toFixed(2)}" stroke-dashoffset="${(-lauf).toFixed(2)}" transform="rotate(-90 110 110)" data-tip="${esc(x.tip)}"/>`;
+      lauf += l; return seg; }).join("")+
+    `</g><text x="110" y="104" text-anchor="middle" class="d-l">${esc(titel)}</text><text x="110" y="126" text-anchor="middle" class="d-v">${esc(wert)}</text>`;
+}
+function donutHell(svgId, listeId){
+  const hell = i => { $$("#"+svgId+" .seg").forEach(c=> c.classList.toggle("blass", i !== null && c.dataset.i !== String(i)));
+    $$("#"+listeId+" .z").forEach(z=> z.classList.toggle("an", z.dataset.i === String(i))); };
+  $$("#"+svgId+" .seg, #"+listeId+" .z").forEach(el=>{ el.addEventListener("mouseenter", ()=> hell(el.dataset.i)); el.addEventListener("mouseleave", ()=> hell(null)); });
+}
+function donutEin(svg){ if(svg && BEWEGUNG){ svg.classList.remove("ein"); void svg.getBoundingClientRect(); svg.classList.add("ein"); } }
 function fsDonut(K){
   const p = K.S.activePeriod, summe = accs => K.r2(accs.reduce((s, a)=> s + K.accVal(p, a), 0));
   const teile = K.investments().filter(i=> i.include).map(i=>({label:i.label, wert:K.r2(summe(i.pay)+summe(i.adj)), bezahlt:summe(i.pay)}))
@@ -277,20 +292,11 @@ function fsDonut(K){
   $("#ovDonutMeta").textContent = "as at "+fd(K.rep(p).asOf)+", "+K.CUR();
   const svg = $("#ovDonut"), liste = $("#ovDonutListe");
   if(!teile.length){ svg.innerHTML = ""; liste.innerHTML = `<p class="mut klein">No investment ticked yet. Tick them under Setup, Statement settings.</p>`; return; }
-  const r = 84, u = 2*Math.PI*r; let lauf = 0;
-  svg.innerHTML = `<circle cx="110" cy="110" r="${r}" fill="none" stroke="var(--papier2)" stroke-width="26"/>`+
-    teile.map((x, i)=>{ const l = x.wert/total*u, gap = teile.length > 1 ? Math.min(2, l/3) : 0;
-      const seg = `<circle class="seg" data-i="${i}" cx="110" cy="110" r="${r}" fill="none" stroke="${DONUT_FARBEN[i % DONUT_FARBEN.length]}" stroke-width="26"
-        stroke-dasharray="${(l-gap).toFixed(2)} ${(u-l+gap).toFixed(2)}" stroke-dashoffset="${(-lauf).toFixed(2)}" transform="rotate(-90 110 110)"
-        data-tip="${esc(`<b>${esc(x.label)}</b>`+tipZeile("Value", K.fmt(x.wert))+tipZeile("Paid in", K.fmt(x.bezahlt))+tipZeile("Share", (x.wert/total*100).toFixed(1)+"%"))}"/>`;
-      lauf += l; return seg; }).join("")+
-    `<text x="110" y="104" text-anchor="middle" class="d-l">Invested</text><text x="110" y="126" text-anchor="middle" class="d-v">${esc(K.fmt(total))}</text>`;
+  svg.innerHTML = donutRing(teile.map(x=>({wert:x.wert, tip:`<b>${esc(x.label)}</b>`+tipZeile("Value", K.fmt(x.wert))+tipZeile("Paid in", K.fmt(x.bezahlt))+tipZeile("Share", (x.wert/total*100).toFixed(1)+"%")})), "Invested", K.fmt(total));
   liste.innerHTML = teile.map((x, i)=>`<div class="z" data-i="${i}"><i style="background:${DONUT_FARBEN[i % DONUT_FARBEN.length]}"></i><span class="t">${esc(x.label)}</span>
     <span class="num">${K.fmt(x.wert)}</span><span class="num mut">${(x.wert/total*100).toFixed(1)}%</span></div>`).join("");
-  const hell = i => { $$("#ovDonut .seg").forEach(c=> c.classList.toggle("blass", i !== null && c.dataset.i !== String(i)));
-    $$("#ovDonutListe .z").forEach(z=> z.classList.toggle("an", z.dataset.i === String(i))); };
-  $$("#ovDonut .seg, #ovDonutListe .z").forEach(el=>{ el.addEventListener("mouseenter", ()=> hell(el.dataset.i)); el.addEventListener("mouseleave", ()=> hell(null)); });
-  if(BEWEGUNG) svg.classList.remove("ein"), void svg.getBoundingClientRect(), svg.classList.add("ein");
+  donutHell("ovDonut", "ovDonutListe");
+  donutEin(svg);
 }
 function renderAnlagen(){
   const K = fsVerlauf();

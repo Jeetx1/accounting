@@ -615,7 +615,7 @@ async function fortfuehrenDialog(fort, fortA){
 
 /* ---------- Booking and deleting ------------------------------------- */
 function siegel(){
-  if(!BEWEGUNG) return;
+  if(!BEWEGUNG || !Kit.isOn("stamp")) return;
   const s = $("#siegel"), m = $("#maske");
   s.classList.remove("los"); m.classList.remove("gebucht"); void s.getBoundingClientRect();
   s.classList.add("los"); m.classList.add("gebucht");

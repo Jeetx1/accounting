@@ -802,7 +802,11 @@ const SCREEN_THEME_LIGHT = {
   hatch: "rgba(196,138,22,.32)", split: "rgba(196,138,22,.65)", splitText: "#9A6A08",
   dotFill: "#1F3F66", dotStroke: "#FFFFFF",
 };
-const screenTheme = () => (isLight() ? SCREEN_THEME_LIGHT : SCREEN_THEME);
+const screenTheme = () => ({
+  pay: [tk("--ev-pay"), ".9", tk("--ev-pay-2"), ".55"], pos: [tk("--ev-pos"), ".78", tk("--ev-pos"), ".28"], neg: [tk("--ev-neg"), ".3", tk("--ev-neg"), ".78"],
+  axis: tk("--chart-grid"), zero: tk("--ev-zero"), text: tk("--chart-axis"), valLine: tk("--ev-val"), payLine: tk("--ev-pay"),
+  hatch: tk("--ev-hatch"), split: tk("--ev-split"), splitText: tk("--ev-split-text"), dotFill: tk("--ev-val"), dotStroke: tk("--surface-solid")
+});
 const PRINT_THEME = {
   pay: ["#4A7DB5", ".9", "#A9BDD6", ".6"],
   pos: ["#2E7D5B", ".75", "#2E7D5B", ".25"],
@@ -969,7 +973,7 @@ function wireHover() {
       '<div class="t">' + esc(p.t) + (p.fc ? " · forecast" : "") + "</div>" +
       '<div class="row"><span>Paid in</span><b>' + fmt(p.pay) + "</b></div>" +
       '<div class="row"><span>Value adjustment</span><b class="' + (adj >= 0 ? "pos" : "neg") + '">' + (adj >= 0 ? "+" : "−") + fmt(Math.abs(adj)) + "</b></div>" +
-      '<div class="row" style="border-top:1px solid rgba(115,134,169,.2);margin-top:5px;padding-top:5px"><span>Value</span><b>' + fmt(p.val) + "</b></div>" +
+      '<div class="row" style="border-top:1px solid var(--hairline);margin-top:5px;padding-top:5px"><span>Value</span><b>' + fmt(p.val) + "</b></div>" +
       '<div class="row"><span>Return</span><b class="' + (adj >= 0 ? "pos" : "neg") + '">' + (adj >= 0 ? "+" : "−") + Math.abs(pct).toFixed(1) + "%</b></div>";
     tip.classList.add("on");
     const wrap = $("#chartWrap").getBoundingClientRect();
@@ -1040,7 +1044,7 @@ function renderInvTable() {
       "<tr>" +
       "<td>" + esc(i.label) +
       '<div style="font-family:var(--num);font-size:10.5px;color:var(--ink-4);margin-top:2px">' +
-      esc(i.pay.join(", ")) + (i.adj.length ? " ↔ " + esc(i.adj.join(", ")) : ' <span style="color:#e8b23f">no split account</span>') + "</div></td>" +
+      esc(i.pay.join(", ")) + (i.adj.length ? " ↔ " + esc(i.adj.join(", ")) : ' <span style="color:var(--ev-warn)">no split account</span>') + "</div></td>" +
       '<td class="num">' + fmt(pay) + "</td>" +
       '<td class="num ' + (adj >= 0 ? "pos" : "neg") + '">' + (nil(adj) ? "–" : (adj > 0 ? "+" : "−") + fmt(Math.abs(adj))) + "</td>" +
       '<td class="num">' + fmt(val) + "</td>" +
@@ -1128,22 +1132,14 @@ function attachTip(svg, wrap, tip, xs, geo, html) {
 
 /* palette for the two overview charts, per theme */
 function OVT() {
-  return isLight() ? {
-    grid: "rgba(133,146,166,.24)", zero: "rgba(133,146,166,.6)",
-    inc: ["#2F5E91", "#2F5E91"], exp: ["#A9BDD6", "#A9BDD6"],
-    hatch: "rgba(196,138,22,.5)", res: "#1F3F66", resDotStroke: "#FFFFFF",
-    lbl: "#8592A6", lblPart: "#9A6A08", cursor: "rgba(47,94,145,.5)",
-    worth: "#2F5E91", assets: "#8FA6BF",
-    worthDotFill: "#FFFFFF", worthDotStroke: "#2F5E91",
-    ovDotFill: "#2F5E91", ovDotStroke: "#FFFFFF",
-  } : {
-    grid: "rgba(115,134,169,.16)", zero: "rgba(115,134,169,.45)",
-    inc: ["#8fc0ff", "#3a6fc0"], exp: ["#ff9a8c", "#c74b3d"],
-    hatch: "rgba(232,178,63,.45)", res: "#57d693", resDotStroke: "#0a1730",
-    lbl: "#7386a9", lblPart: "#e8b23f", cursor: "rgba(102,168,255,.5)",
-    worth: "#66a8ff", assets: "rgba(115,134,169,.45)",
-    worthDotFill: "#0a1730", worthDotStroke: "#66a8ff",
-    ovDotFill: "#66a8ff", ovDotStroke: "#0a1730",
+  return {
+    grid: tk("--chart-grid"), zero: tk("--ev-zero"),
+    inc: [tk("--ev-inc"), tk("--ev-inc-2")], exp: [tk("--ev-exp"), tk("--ev-exp-2")],
+    hatch: tk("--ev-hatch"), res: tk("--ev-res"), resDotStroke: tk("--surface-solid"),
+    lbl: tk("--chart-axis"), lblPart: tk("--ev-split-text"), cursor: tk("--ev-cursor"),
+    worth: tk("--ev-worth"), assets: tk("--ev-assets"),
+    worthDotFill: tk("--surface-solid"), worthDotStroke: tk("--ev-worth"),
+    ovDotFill: tk("--ev-worth"), ovDotStroke: tk("--surface-solid"),
   };
 }
 
@@ -1215,7 +1211,7 @@ function drawOvBars() {
     return '<div class="t">' + esc(d.label) + (d.part ? " · " + d.months + " months" : "") + "</div>" +
       tipRow("Income", fmt(d.income)) +
       tipRow("Expenses", "\u2212" + fmt(d.expense), "neg") +
-      '<div class="row" style="border-top:1px solid rgba(115,134,169,.2);margin-top:5px;padding-top:5px"><span>Result</span><b class="' +
+      '<div class="row" style="border-top:1px solid var(--hairline);margin-top:5px;padding-top:5px"><span>Result</span><b class="' +
       (d.result >= 0 ? "pos" : "neg") + '">' + fmt(d.result) + "</b></div>" +
       tipRow("Savings rate", (d.income ? (d.result / d.income) * 100 : 0).toFixed(1) + "%");
   });
@@ -1268,7 +1264,7 @@ function drawOvLine() {
     '<path d="' + area + '" fill="url(#ovWorth)"/>' +
     '<path d="' + path("assets") + '" fill="none" stroke="' + T.assets + '" stroke-width="1.3" stroke-dasharray="4 4"/>' +
     '<path d="' + path("worth") + '" fill="none" stroke="' + T.worth + '" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>' +
-    data.map((d, i) => '<circle cx="' + xOf(i).toFixed(1) + '" cy="' + yOf(d.worth).toFixed(1) + '" r="3.4" fill="' + T.worthDotFill + '" stroke="' + T.worthDotStroke + '" stroke-width="2"/>').join("") +
+    data.map((d, i) => (data.length > 40 && i < data.length - 1) ? "" : '<circle cx="' + xOf(i).toFixed(1) + '" cy="' + yOf(d.worth).toFixed(1) + '" r="3.4" fill="' + T.worthDotFill + '" stroke="' + T.worthDotStroke + '" stroke-width="2"/>').join("") +
     labels.join("") +
     '<line class="ovcur" x1="0" y1="' + mt + '" x2="0" y2="' + (mt + ih) + '" stroke="' + T.cursor + '" stroke-dasharray="3 3" opacity="0"/>' +
     '<circle class="ovdot" r="5" fill="' + T.ovDotFill + '" stroke="' + T.ovDotStroke + '" stroke-width="2" opacity="0"/>' +
@@ -1280,7 +1276,7 @@ function drawOvLine() {
     return '<div class="t">' + esc(d.t) + " · " + esc(d.label) + "</div>" +
       tipRow("Total assets", fmt(d.assets)) +
       tipRow("Total liabilities", "\u2212" + fmt(d.liab), "neg") +
-      '<div class="row" style="border-top:1px solid rgba(115,134,169,.2);margin-top:5px;padding-top:5px"><span>Net worth</span><b>' + fmt(d.worth) + "</b></div>" +
+      '<div class="row" style="border-top:1px solid var(--hairline);margin-top:5px;padding-top:5px"><span>Net worth</span><b>' + fmt(d.worth) + "</b></div>" +
       (prev ? tipRow("Since " + prev.label, (ch >= 0 ? "+" : "\u2212") + fmt(Math.abs(ch)), ch >= 0 ? "pos" : "neg") : "");
   });
 }

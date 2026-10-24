@@ -3,6 +3,8 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Zurich   # date bugs that only show outside UTC fail here too
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -10,6 +12,7 @@ jobs:
           node-version: 22
       - run: chmod +x run_tests.sh build.sh
       - run: npm install --silent
+      - run: npx playwright install --with-deps chromium
       - run: ./run_tests.sh
-      - name: docs/index.html is the build of src/
-        run: git diff --exit-code docs/index.html
+      - name: docs/ is the build of src/ and pwa/
+        run: git diff --exit-code docs/

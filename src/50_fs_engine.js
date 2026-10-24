@@ -722,13 +722,14 @@ function observedMonthly(inv) {
   const d = inv.pay.reduce((s, x) => s + accVal(b, x) - accVal(a, x), 0);
   return Math.max(0, r2(d / m));
 }
+/* dates are calendar days: read and written in UTC (local time written back with toISOString can land on the day before) */
 function monthsBetween(a, b) {
-  const A = new Date(a + "T00:00:00"), B = new Date(b + "T00:00:00");
+  const A = new Date(a + "T00:00:00Z"), B = new Date(b + "T00:00:00Z");
   return Math.max(0, Math.round((B - A) / (365.25 / 12 * 86400000)));
 }
 function addMonths(iso, n) {
-  const d = new Date(iso + "T00:00:00");
-  d.setMonth(d.getMonth() + n);
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCMonth(d.getUTCMonth() + n);
   return d.toISOString().slice(0, 10);
 }
 const invSelected = () => {
@@ -951,7 +952,7 @@ function signRuns(pts) {
   return runs;
 }
 function isoLerp(a, b, t) {
-  const A = new Date(a + "T00:00:00").getTime(), B = new Date(b + "T00:00:00").getTime();
+  const A = new Date(a + "T00:00:00Z").getTime(), B = new Date(b + "T00:00:00Z").getTime();
   return new Date(A + (B - A) * t).toISOString().slice(0, 10);
 }
 
@@ -1357,7 +1358,8 @@ const PAGE_W = 189 * MM;   // A4 width  less margins, minus a hair of slack
 const PAGE_H = 276 * MM;   // A4 height less margins, minus a hair of slack
 const FORECAST_YEARS = [3, 10, 30];
 
-const today = () => new Date().toISOString().slice(0, 10);
+/* today on this device's calendar, not the UTC one (which still says yesterday in the first hours of a day) */
+const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
 
 function pHead(title, right) {
   return '<div class="phd"><div><h1>' + esc(title) + "</h1>" +

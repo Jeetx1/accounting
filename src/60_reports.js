@@ -63,7 +63,7 @@ function fsDaten(state, ix, E, opt){
 }
 // default report and comparison for a year: finished years at year end, the running year at the last month end
 function fsStandard(state, jahr, heute){
-  const h = heute || new Date().toISOString().slice(0,10);
+  const jetzt = new Date(), h = heute || jetzt.getFullYear()+"-"+String(jetzt.getMonth()+1).padStart(2,"0")+"-"+String(jetzt.getDate()).padStart(2,"0");
   let p = jahr+"-12";
   if(h.slice(0,4) === String(jahr)){ const m = +h.slice(5,7) - 1; p = m >= 1 ? jahr+"-"+String(m).padStart(2,"0") : jahr+"-12"; }
   return {p:p, c:(jahr-1)+"-12"};

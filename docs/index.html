@@ -2,7 +2,7 @@
 <html lang="en" data-theme="glass">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="2026-10-24.3">
+<meta name="build" content="2026-10-24.4">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#070B10">
 <meta name="color-scheme" content="light dark">
@@ -8590,13 +8590,14 @@ function observedMonthly(inv) {
   const d = inv.pay.reduce((s, x) => s + accVal(b, x) - accVal(a, x), 0);
   return Math.max(0, r2(d / m));
 }
+/* dates are calendar days: read and written in UTC (local time written back with toISOString can land on the day before) */
 function monthsBetween(a, b) {
-  const A = new Date(a + "T00:00:00"), B = new Date(b + "T00:00:00");
+  const A = new Date(a + "T00:00:00Z"), B = new Date(b + "T00:00:00Z");
   return Math.max(0, Math.round((B - A) / (365.25 / 12 * 86400000)));
 }
 function addMonths(iso, n) {
-  const d = new Date(iso + "T00:00:00");
-  d.setMonth(d.getMonth() + n);
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCMonth(d.getUTCMonth() + n);
   return d.toISOString().slice(0, 10);
 }
 const invSelected = () => {
@@ -8819,7 +8820,7 @@ function signRuns(pts) {
   return runs;
 }
 function isoLerp(a, b, t) {
-  const A = new Date(a + "T00:00:00").getTime(), B = new Date(b + "T00:00:00").getTime();
+  const A = new Date(a + "T00:00:00Z").getTime(), B = new Date(b + "T00:00:00Z").getTime();
   return new Date(A + (B - A) * t).toISOString().slice(0, 10);
 }
 
@@ -9225,7 +9226,8 @@ const PAGE_W = 189 * MM;   // A4 width  less margins, minus a hair of slack
 const PAGE_H = 276 * MM;   // A4 height less margins, minus a hair of slack
 const FORECAST_YEARS = [3, 10, 30];
 
-const today = () => new Date().toISOString().slice(0, 10);
+/* today on this device's calendar, not the UTC one (which still says yesterday in the first hours of a day) */
+const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
 
 function pHead(title, right) {
   return '<div class="phd"><div><h1>' + esc(title) + "</h1>" +
@@ -10272,7 +10274,7 @@ function fsDaten(state, ix, E, opt){
 }
 // default report and comparison for a year: finished years at year end, the running year at the last month end
 function fsStandard(state, jahr, heute){
-  const h = heute || new Date().toISOString().slice(0,10);
+  const jetzt = new Date(), h = heute || jetzt.getFullYear()+"-"+String(jetzt.getMonth()+1).padStart(2,"0")+"-"+String(jetzt.getDate()).padStart(2,"0");
   let p = jahr+"-12";
   if(h.slice(0,4) === String(jahr)){ const m = +h.slice(5,7) - 1; p = m >= 1 ? jahr+"-"+String(m).padStart(2,"0") : jahr+"-12"; }
   return {p:p, c:(jahr-1)+"-12"};

@@ -1,8 +1,8 @@
 #!/bin/bash
 # Builds docs/ and runs the checks.
-#  - always (also in CI on GitHub): interface + logic in jsdom, synthetic fixture, frozen clock (tests/test_app.js)
-#  - when Playwright with Chromium is available (Claude's sessions): the three looks on phone and desktop
-#    (tests/test_ui.js) and the Design Lab smoke test (tests/smoke.js)
+#  - always: interface + logic in jsdom, synthetic fixture, frozen clock (tests/test_app.js)
+#  - when Playwright with Chromium is available (CI on GitHub installs it; locally: npx playwright install chromium):
+#    the three looks on phone and desktop (tests/test_ui.js) and the Design Lab smoke test (tests/smoke.js)
 # If private/ holds a real data file, the logic test also does an open + save round trip with it.
 set -eo pipefail
 cd "$(dirname "$0")"
@@ -17,5 +17,5 @@ if node -e "const p = require('playwright'); process.exit(require('fs').existsSy
   echo "--- Design Lab smoke test"
   node tests/smoke.js docs/index.html tests/shots/smoke | tail -1
 else
-  echo "--- Chromium checks skipped (no Playwright here): CI runs the interface and logic checks"
+  echo "--- Chromium checks skipped (no Playwright here): CI on GitHub runs them"
 fi

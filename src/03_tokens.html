@@ -14,6 +14,11 @@
   --ev-ok:#86D4C4; --ev-ok-soft:rgba(134,212,196,.14); --ev-warn:#E39A12; --ev-warn-soft:rgba(227,154,18,.14);
   --ev-gold:#B9A9F0; --ev-band:rgba(255,255,255,.028); --ev-rule:rgba(255,255,255,.08); --ev-rule-2:rgba(255,255,255,.17); --ev-panel:rgba(255,255,255,.045);
   --seal-bg:rgba(13,20,27,.94); --seal-face:#0F1A24; --seal-ring-1:#4A7DB5; --seal-ring-2:#B9A9F0; --seal-ink:#E6F1FC;
+  /* 24.10. (owner's feedback): fields a little darker so text stays readable over the drifting light */
+  --field-bg:rgba(6,12,20,.42); --field-bg-focus:rgba(6,12,20,.56);
+  /* the wide tables (Twelve months, Years) are one even sheet: the same colour under every cell, sticky ones included,
+     a mid glass blue (not the near-black solid surface), header a step lighter */
+  --ev-sheet:#172636; --ev-sheet-head:#20334A;
 }
 :root[data-theme="ember"]{
   --ev-pay:#FF8A3D; --ev-pay-2:#7A2A10; --ev-pos:#FFC24A; --ev-neg:#FF5A47; --ev-zero:rgba(255,190,160,.36); --ev-val:#FFE3B0;
@@ -25,6 +30,7 @@
   --ev-ok:#FFC24A; --ev-ok-soft:rgba(255,194,74,.13); --ev-warn:#FF8A3D; --ev-warn-soft:rgba(255,138,61,.15);
   --ev-gold:#FFC24A; --ev-band:rgba(255,190,160,.03); --ev-rule:rgba(255,190,160,.09); --ev-rule-2:rgba(255,190,160,.18); --ev-panel:rgba(255,190,160,.05);
   --seal-bg:rgba(20,10,7,.95); --seal-face:#1A0D08; --seal-ring-1:#E8401A; --seal-ring-2:#FFC24A; --seal-ink:#FFE9D6;
+  --ev-sheet:var(--surface-solid); --ev-sheet-head:var(--table-head-bg);
 }
 :root[data-theme="prism"]{
   --ev-pay:#6E56FF; --ev-pay-2:#C9C0FF; --ev-pos:#14B88B; --ev-neg:#DC2B55; --ev-zero:rgba(20,22,40,.32); --ev-val:#4A37E8;
@@ -36,5 +42,6 @@
   --ev-ok:#0FA37F; --ev-ok-soft:rgba(20,184,139,.12); --ev-warn:#A86A00; --ev-warn-soft:rgba(242,161,0,.13);
   --ev-gold:#F2A100; --ev-band:rgba(20,22,40,.022); --ev-rule:rgba(20,22,40,.08); --ev-rule-2:rgba(20,22,40,.16); --ev-panel:rgba(20,22,40,.035);
   --seal-bg:rgba(255,255,255,.96); --seal-face:#FFFFFF; --seal-ring-1:#6E56FF; --seal-ring-2:#16B2E3; --seal-ink:#2A1F8F;
+  --ev-sheet:var(--surface-solid); --ev-sheet-head:var(--table-head-bg);
 }
 </style>

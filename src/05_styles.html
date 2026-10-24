@@ -74,13 +74,14 @@ nav.haupt button.on{background:var(--tab-active-bg);color:var(--tab-active-text)
 .knopfreihe .save{flex:1}
 
 /* the file menu: the shared rounded menu, opening upwards from the sidebar */
-.dmenu{position:relative;flex:none}
+.knopfreihe{position:relative}
+.dmenu{position:static;flex:none}
 .dmenu>summary{list-style:none;height:var(--btn-h-sm);width:var(--btn-h-sm);display:grid;place-items:center;border-radius:var(--r-btn);border:var(--bw) solid var(--border);color:var(--text-2);cursor:pointer;
   transition:color var(--dur-fast),border-color var(--dur-fast)}
 .dmenu>summary:hover{color:var(--text);border-color:var(--border-strong)}
 .dmenu>summary::-webkit-details-marker{display:none}
 .dmenu[open]>summary{color:var(--text);border-color:var(--border-strong)}
-.dmenu .panel{position:absolute;left:0;bottom:calc(100% + 8px);width:232px;background:var(--menu-bg);color:var(--text);border:var(--bw) solid var(--border);border-radius:var(--r-menu);
+.dmenu .panel{position:absolute;left:0;right:0;bottom:calc(100% + 8px);width:auto;max-width:260px;background:linear-gradient(var(--menu-bg),var(--menu-bg)),var(--surface-solid);color:var(--text);border:var(--bw) solid var(--border);border-radius:var(--r-menu);
   box-shadow:var(--shadow-pop);-webkit-backdrop-filter:var(--backdrop);backdrop-filter:var(--backdrop);padding:6px;z-index:60;transform-origin:20% 100%;animation:menuInUp var(--dur) var(--ease-spring) both}
 .dmenu .panel button{display:block;width:100%;text-align:left;padding:8px 12px;border-radius:var(--r-menu-item);font-size:13.5px;color:var(--text);transition:background var(--dur-fast)}
 .dmenu .panel button:hover{background:var(--neutral-soft)}
@@ -393,27 +394,32 @@ table.jo .splitchip{font-size:11px;font-weight:600;color:var(--text-3);text-tran
 .tip .z{display:flex;justify-content:space-between;gap:14px}
 [data-tip]{cursor:default}
 /* twelve months, years */
-.monate{overflow:auto;max-height:calc(100vh - 170px);border:var(--bw) solid var(--ev-rule);border-radius:var(--r-inner);background:var(--surface-solid)}
-.monate table{border-collapse:separate;border-spacing:0;min-width:1180px}
-.monate th{position:sticky;top:0;background:var(--table-head-bg);z-index:2}
-.monate td,.monate th{padding:5px 8px;border-bottom:var(--bw) solid var(--ev-rule);white-space:nowrap}
-.monate td:first-child,.monate th:first-child{position:sticky;left:0;background:var(--surface-solid);z-index:1;min-width:260px;max-width:340px;overflow:hidden;text-overflow:ellipsis}
-.monate th:first-child{z-index:3;background:var(--table-head-bg)}
+/* Twelve months and Years: one even sheet. Every cell sits on the same colour (--ev-sheet); rows only add the same thin
+   overlays everywhere, so the sticky account column and header can never look different from the cells next to them. */
+.monate{overflow:auto;max-height:calc(100vh - 170px);border:var(--bw) solid var(--ev-rule);border-radius:var(--r-inner);background:var(--ev-sheet)}
+.monate table{border-collapse:separate;border-spacing:0;min-width:1180px;background:var(--ev-sheet)}
+.monate td,.monate th{padding:5px 8px;border-bottom:var(--bw) solid var(--ev-rule);white-space:nowrap;background:var(--ev-sheet)}
+.monate th{position:sticky;top:0;background:var(--ev-sheet-head);z-index:2}
+.monate td:first-child,.monate th:first-child{position:sticky;left:0;z-index:1;min-width:260px;max-width:340px;overflow:hidden;text-overflow:ellipsis;box-shadow:inset -1px 0 0 var(--ev-rule)}
+.monate th:first-child{z-index:3}
+.monate tbody tr:nth-child(even) td{background:linear-gradient(var(--ev-band),var(--ev-band)),var(--ev-sheet)}
 .monate tr.teil td{font-family:var(--font-display);font-weight:var(--fw-display);font-size:15px;padding-top:14px}
 .monate tr.bereich td{font-weight:600;color:var(--accent);padding-top:12px}
-.monate tr.gruppe td,.monate tr.gruppe td:first-child{font-weight:600;background:var(--ev-panel)}
-.monate tr.gruppe td:first-child{background:linear-gradient(var(--ev-panel),var(--ev-panel)),var(--surface-solid)}
-.monate tr.summe td{font-weight:600;border-top:var(--bw) solid var(--text);background:linear-gradient(var(--ev-panel),var(--ev-panel)),var(--surface-solid)}
+.monate tbody tr.gruppe td{font-weight:600;background:linear-gradient(var(--ev-panel),var(--ev-panel)),var(--ev-sheet)}
+.monate tbody tr.summe td{font-weight:600;border-top:var(--bw) solid var(--text);background:linear-gradient(var(--ev-panel),var(--ev-panel)),var(--ev-sheet)}
 .monate tr.total td{font-weight:700;border-top:var(--bw) solid var(--text);border-bottom:3px double var(--text)}
 .monate td.einzug{padding-left:22px}
 .monate td.sp{border-left:var(--bw) solid var(--ev-rule-2)}
 .monate.jahre table{min-width:0;width:100%}
 .monate.jahre td:not(:first-child),.monate.jahre th:not(:first-child){width:120px}
-.monate td.delta,.monate th.delta{display:table-cell;height:auto;border-radius:0;background:none;font-weight:inherit;color:var(--text-3);font-size:12px;width:96px!important;padding:5px 8px}
+.monate td.delta,.monate th.delta{display:table-cell;height:auto;border-radius:0;font-weight:inherit;color:var(--text-3);font-size:12px;width:96px!important;padding:5px 8px}
 .monate th small{display:block;font-weight:500;color:var(--text-3);font-size:11px;text-transform:none;letter-spacing:0}
 .monate tr.klappbar{cursor:pointer}
-.monate tr.klappbar:hover td{background:var(--row-hover)}
-.monate .chev{display:inline-block;width:14px;height:auto;border:0;transform:none;color:var(--text-3);font-size:10px;transition:transform var(--dur) var(--ease-spring)}
+.monate tbody tr.klappbar:hover td{background:linear-gradient(var(--row-hover),var(--row-hover)),var(--ev-sheet)}
+/* one chevron per group, drawn like the statements' chevrons */
+.monate .chev{display:inline-block;position:relative;width:14px;height:12px;margin-right:4px;vertical-align:middle;font-size:0;line-height:12px;border:0;transform:none;transition:transform var(--dur) var(--ease-spring)}
+.monate .chev::before{content:"";position:absolute;left:3px;top:3px;width:5px;height:5px;border-right:1.6px solid var(--text-3);border-bottom:1.6px solid var(--text-3);transform:rotate(-45deg)}
+.monate .chev.none{visibility:hidden}
 .monate tr.klappbar.open .chev{transform:rotate(90deg)}
 .monate tr.zu{display:none}
 
@@ -627,4 +633,7 @@ table.inv label.toggle{display:inline-flex;align-items:center}
 
 /* the build version at the bottom of the file menu */
 .menu__build{padding:8px 10px 2px;font-size:11px;color:var(--text-4);font-variant-numeric:tabular-nums;text-align:center}
+
+/* native option lists in the look's colours (otherwise light text on a white list in the dark looks) */
+select option,select optgroup{background:var(--surface-solid);color:var(--text)}
 </style>

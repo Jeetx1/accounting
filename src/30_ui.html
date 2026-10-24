@@ -1220,7 +1220,7 @@ function klappbar(seite, tbl){
     if(tr.classList.contains("gruppe")){
       gruppe = seite+"|"+(nr++)+"|"+tr.querySelector("td").textContent.trim();
       tr.dataset.grp = gruppe; tr.classList.add("klappbar");
-      const td = tr.querySelector("td"); td.insertAdjacentHTML("afterbegin", `<span class="chev">▸</span>`);
+      const td = tr.querySelector("td"); if(!td.querySelector(".chev")) td.insertAdjacentHTML("afterbegin", `<span class="chev">▸</span>`);   // one chevron (the statements engine may already draw one)
       tr.classList.toggle("open", !ZU[seite].has(gruppe));
       tr.onclick = ()=>{ const g = tr.dataset.grp; ZU[seite].has(g) ? ZU[seite].delete(g) : ZU[seite].add(g); klappAnwenden(seite, tbl); };
       return;

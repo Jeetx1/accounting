@@ -85,7 +85,7 @@ Kit.init({
   onTheme: (id, first) => { if(!first && geladen){ try{ render(); }catch(e){ console.error(e); } } },
   toast: (m, o) => meldung(m, {fehler: !!(o && o.type === "error")})
 });
-Kit.initDropdowns("select.eingabe, .ctl select");
+Kit.initDropdowns("select:not([multiple])");   // every dropdown gets the themed menu on a computer (24.10.: incl. the pills on Statement settings)
 { const lb = Kit.lookButton(); lb.id = "look"; $("#lookSlot").replaceWith(lb); }
 { const look = $("#startLook"); if(look){ const sw = Kit.themeSwitch(); look.appendChild(sw.el); document.addEventListener("dl:theme", sw.sync); } }
 /* the tool's dialogs open and close by a class: tell the effects (Glass sinks the page back behind them) */
